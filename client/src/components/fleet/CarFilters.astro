@@ -1,0 +1,127 @@
+---
+import type { CarCategory, FuelType, Transmission } from "@/types/car";
+
+interface Props {
+    category?: string;
+    transmission?: string;
+    fuel?: string;
+    maxPrice?: string;
+    action?: string;
+}
+
+const {
+    category = "",
+    transmission = "",
+    fuel = "",
+    maxPrice = "",
+    action = "/rent-a-car",
+} = Astro.props;
+
+const categories: { value: CarCategory; label: string }[] = [
+    { value: "economy", label: "Economy" },
+    { value: "compact", label: "Compact" },
+    { value: "suv", label: "SUV" },
+    { value: "van", label: "Van" },
+    { value: "luxury", label: "Luxury" },
+];
+
+const transmissions: { value: Transmission; label: string }[] = [
+    { value: "manual", label: "Manual" },
+    { value: "automatic", label: "Automatic" },
+];
+
+const fuels: { value: FuelType; label: string }[] = [
+    { value: "gasoline", label: "Gasoline" },
+    { value: "diesel", label: "Diesel" },
+    { value: "hybrid", label: "Hybrid" },
+    { value: "electric", label: "Electric" },
+];
+
+const selectClass =
+    "select select-bordered w-full focus:border-slate-400 focus:outline-slate-400";
+const labelClass = "text-sm font-medium text-slate-600 mb-1 block";
+---
+
+<form
+    method="get"
+    action={action}
+    class="rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6"
+>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+            <label class={labelClass} for="category">Category</label>
+            <select id="category" name="category" class={selectClass}>
+                <option value="">All categories</option>
+                {
+                    categories.map((c) => (
+                        <option value={c.value} selected={c.value === category}>
+                            {c.label}
+                        </option>
+                    ))
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class={labelClass} for="transmission">Transmission</label>
+            <select id="transmission" name="transmission" class={selectClass}>
+                <option value="">Any transmission</option>
+                {
+                    transmissions.map((t) => (
+                        <option value={t.value} selected={t.value === transmission}>
+                            {t.label}
+                        </option>
+                    ))
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class={labelClass} for="fuel">Fuel</label>
+            <select id="fuel" name="fuel" class={selectClass}>
+                <option value="">Any fuel</option>
+                {
+                    fuels.map((f) => (
+                        <option value={f.value} selected={f.value === fuel}>
+                            {f.label}
+                        </option>
+                    ))
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class={labelClass} for="maxPrice">Max price / day</label>
+            <div class="relative">
+                <input
+                    type="number"
+                    id="maxPrice"
+                    name="maxPrice"
+                    min="0"
+                    step="1"
+                    placeholder="No limit"
+                    value={maxPrice}
+                    class="input input-bordered w-full pr-8 focus:border-slate-400 focus:outline-slate-400"
+                />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                    €
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4 mt-5 pt-5 border-t border-slate-200">
+        <div class="flex items-center gap-3">
+            <a href={action} class="btn btn-ghost text-slate-600">
+                Reset
+            </a>
+            <button
+                type="submit"
+                class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
+            >
+                Apply filters
+            </button>
+        </div>
+    </div>
+</form>

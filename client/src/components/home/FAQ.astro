@@ -1,0 +1,73 @@
+---
+const faqs = [
+    {
+        question: "How can I get the cheapest car rental price?",
+        answer: "Book as early as possible and choose flexible pickup dates — prices are lowest weeks in advance. Booking directly on our website also avoids the extra fees that comparison sites and brokers often add.",
+    },
+    {
+        question: "What types of vehicles are available?",
+        answer: "Our fleet ranges from compact city cars and sedans to SUVs, minivans, and premium vehicles. Every listing shows seating capacity, luggage space, and transmission type so you can pick the right car for your trip.",
+    },
+    {
+        question: "Why should I book directly instead of using a comparison site?",
+        answer: "Booking directly with ALC Cars means no middleman fees, direct access to our support team, and full control over changes or cancellations. You also get our best-price guarantee, which isn't always honored through third parties.",
+    },
+    {
+        question: "How long does it take to pick up the car?",
+        answer: "Most pickups take less than 10 minutes if you arrive with your documents ready. Simply show your reservation confirmation, driving license, and ID at the counter and you'll be on the road quickly.",
+    },
+    {
+        question: "What documents do I need to rent a car?",
+        answer: "You'll need a valid driving license, a national ID or passport, and the credit card used for the booking. International renters may also need an International Driving Permit depending on their country of origin.",
+    },
+    {
+        question: "What is the minimum age and license requirement?",
+        answer: "Drivers must be at least 21 years old and hold a valid license for a minimum of 1 year. Drivers under 25 may be subject to a young driver surcharge, which varies by vehicle category.",
+    },
+    {
+        question: "What insurance and deposit policies apply?",
+        answer: "All rentals include basic liability insurance, with optional coverage available to reduce your excess to zero. A refundable security deposit is held on your credit card at pickup and released after the car is returned undamaged.",
+    },
+    {
+        question: "What is the fuel policy?",
+        answer: "We use a full-to-full fuel policy: you receive the car with a full tank and simply return it full. If the car isn't refueled before drop-off, a refueling fee plus the missing fuel cost will apply.",
+    },
+] satisfies { question: string; answer: string }[];
+---
+
+<section class="bg-white py-16 px-4">
+    <div class="max-w-3xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
+            Frequently Asked Questions about Car Rental with <span class="text-orange-500">ALC Cars</span>
+        </h2>
+        <p class="text-center max-w-xl mx-auto mb-12 text-slate-600">
+            Everything you need to know before booking your next rental. Can't
+            find your answer? Our support team is available 24/7.
+        </p>
+
+        <!-- Bordered accordion card -->
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden">
+            {
+                faqs.map((faq, index) => (
+                    <div class="collapse collapse-arrow rounded-none">
+                        <input
+                            type="radio"
+                            name="faq-accordion"
+                            aria-label={faq.question}
+                            checked={index === 0}
+                            class="peer"
+                        />
+                        <h3 class="collapse-title text-base md:text-lg font-semibold text-slate-900 peer-checked:text-orange-600 pr-10">
+                            {faq.question}
+                        </h3>
+                        <div class="collapse-content">
+                            <p class="text-sm md:text-base text-slate-600 leading-relaxed">
+                                {faq.answer}
+                            </p>
+                        </div>
+                    </div>
+                ))
+            }
+        </div>
+    </div>
+</section>

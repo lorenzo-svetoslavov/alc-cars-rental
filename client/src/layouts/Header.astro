@@ -1,0 +1,23 @@
+---
+import { Image } from "astro:assets";
+import logo from "@/assets/logo-alc-cars.webp";
+---
+
+<div class="navbar bg-orange-500 text-white shadow-sm">
+	<div class="flex-1">
+		<Image src={logo} alt="ALC Cars" class="h-15 w-auto object-contain" />
+	</div>
+	<div class="flex-none">
+		<ul class="menu menu-horizontal px-1 flex items-center">
+			<li class="font-bold"><a href="/">HOME</a></li>
+			<li class="font-bold"><a href="/rent-a-car">RENT A CAR</a></li>
+			<li class="font-bold"><a>LOCATION</a></li>
+			<li class="font-bold">
+				<a href="/auth/login"
+					><button class="btn border-none shadow-none">LOG IN</button
+					></a
+				>
+			</li>
+		</ul>
+	</div>
+</div>

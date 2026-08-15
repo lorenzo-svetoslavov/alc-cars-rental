@@ -1,0 +1,9 @@
+---
+export async function getStaticPaths() {
+  return [];
+}
+
+const { code } = Astro.params;
+---
+
+<p>Confirmación de reserva: {code}</p>

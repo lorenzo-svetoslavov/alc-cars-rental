@@ -1,0 +1,31 @@
+---
+import CarCard from "@/components/fleet/CarCard.astro";
+import type { Car } from "@/types/car";
+
+interface Props {
+    cars: Car[];
+}
+
+const { cars } = Astro.props;
+---
+
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-bold text-slate-800">Available cars</h2>
+    <p class="text-sm text-slate-500">
+        {cars.length} {cars.length === 1 ? "car" : "cars"} found
+    </p>
+</div>
+
+{
+    cars.length === 0 ? (
+        <p class="text-slate-500 text-center py-12">
+            No cars match the selected filters.
+        </p>
+    ) : (
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {cars.map((car) => (
+                <CarCard car={car} />
+            ))}
+        </div>
+    )
+}

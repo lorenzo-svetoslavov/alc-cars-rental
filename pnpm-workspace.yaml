@@ -1,0 +1,6 @@
+packages:
+  - admin
+  - client
+allowBuilds:
+  esbuild: true
+  sharp: true

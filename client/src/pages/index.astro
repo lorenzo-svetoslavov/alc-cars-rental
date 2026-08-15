@@ -1,0 +1,24 @@
+---
+export const prerender = true;
+
+import "@/styles/global.css";
+
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Hero from "@/components/home/Hero.astro";
+import WhyChooseUs from "@/components/home/WhyChooseUs.astro";
+import Location from "@/components/home/Location.astro";
+import FAQ from "@/components/home/FAQ.astro";
+import CTABanner from "@/components/home/CTABanner.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="ALC Cars · Car rental">
+	<Header />
+	<Hero client:load />
+	<WhyChooseUs />
+	<Location />
+	<FAQ />
+	<CTABanner />
+	<Footer />
+</BaseLayout>

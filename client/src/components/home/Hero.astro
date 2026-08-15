@@ -1,0 +1,204 @@
+---
+import hero from "@/assets/home/hero-rental-cars.webp";
+import "flatpickr/dist/flatpickr.min.css";
+---
+
+<div class="hero min-h-screen" style={`background-image: url(${hero.src});`}>
+    <div class="hero-overlay bg-black/60"></div>
+    <div class="hero-content text-neutral-content text-center">
+        <div class="max-w-md">
+            <h1 class="mb-5 text-5xl font-bold">Drive Your Way</h1>
+            <p class="mb-5">
+                Rent the perfect car for your next trip. Wide selection,
+                unbeatable prices, and easy online booking in just a few clicks.
+            </p>
+
+            <form
+                x-data="heroSearch"
+                method="get"
+                action="/rent-a-car"
+                @submit="onSubmit($event)"
+                class="bg-white/80 rounded-xl shadow-lg p-4 flex flex-col gap-3 text-neutral mb-5"
+            >
+                <div class="flex flex-col text-left">
+                    <label for="pickup-date" class="text-sm font-bold mb-1"
+                        >Pickup date &amp; time</label
+                    >
+                    <input
+                        id="pickup-date"
+                        name="pickup"
+                        type="text"
+                        placeholder="Select date & time"
+                        x-ref="pickupInput"
+                        x-model="pickupAt"
+                        class="input input-bordered w-full"
+                    />
+                    <p
+                        x-show="pickupError"
+                        x-text="pickupError"
+                        x-cloak
+                        class="text-sm text-red-600 mt-1"
+                    >
+                    </p>
+                </div>
+
+                <div class="flex flex-col text-left">
+                    <label for="return-date" class="text-sm font-bold mb-1"
+                        >Return date &amp; time</label
+                    >
+                    <input
+                        id="return-date"
+                        name="return"
+                        type="text"
+                        placeholder="Select date & time"
+                        x-ref="returnInput"
+                        x-model="returnAt"
+                        class="input input-bordered w-full"
+                    />
+                    <p
+                        x-show="returnError"
+                        x-text="returnError"
+                        x-cloak
+                        class="text-sm text-red-600 mt-1"
+                    >
+                    </p>
+                </div>
+
+                <div class="flex flex-col text-left">
+                    <label for="pickup-return-location" class="text-sm font-bold mb-1"
+                        >Pickup & Return location</label
+                    >
+                    <input
+                        id="pickup-return-location"
+                        type="text"
+                        value="Alicante Airport"
+                        disabled
+                        class="input input-bordered w-full disabled:bg-gray-100 disabled:text-neutral disabled:opacity-60"
+                    />
+                </div>
+
+                <div class="flex flex-col text-left">
+                    <div class="flex items-center gap-2">
+                        <input
+                            id="age-confirmation"
+                            type="checkbox"
+                            x-model="ageConfirmed"
+                            class="checkbox checkbox-sm"
+                        />
+                        <label for="age-confirmation" class="text-sm"
+                            >I confirm the driver is 25+ years</label
+                        >
+                    </div>
+                    <p
+                        x-show="ageError"
+                        x-text="ageError"
+                        x-cloak
+                        class="text-sm text-red-600 mt-1"
+                    >
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none w-full"
+                    >Search</button
+                >
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    import Alpine from "alpinejs";
+    import flatpickr from "flatpickr";
+    import type { Instance } from "flatpickr/dist/types/instance";
+
+    // Blocked holidays (month is 0-11, any year)
+    const isBlockedDate = (date: Date) =>
+        (date.getMonth() === 11 && date.getDate() === 25) ||
+        (date.getMonth() === 0 && date.getDate() === 1);
+
+    const dateTimeOptions = {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:i",
+        minuteIncrement: 5,
+        minTime: "06:00",
+        maxTime: "23:55",
+        defaultHour: 10,
+        minDate: "today",
+        disable: [isBlockedDate],
+    };
+
+    document.addEventListener("alpine:init", () => {
+        Alpine.data("heroSearch", () => ({
+            pickupAt: "",
+            returnAt: "",
+            ageConfirmed: false,
+            submitted: false,
+            returnPicker: null as Instance | null,
+
+            init() {
+                this.returnPicker = flatpickr(this.$refs.returnInput, {
+                    ...dateTimeOptions,
+                    onChange: (_dates, value) => {
+                        this.returnAt = value;
+                        this.syncMinReturnTime();
+                    },
+                });
+
+                flatpickr(this.$refs.pickupInput, {
+                    ...dateTimeOptions,
+                    onChange: (dates, value) => {
+                        this.pickupAt = value;
+                        // Return date can't be before the pickup date
+                        this.returnPicker?.set("minDate", dates[0]);
+                        this.syncMinReturnTime();
+                    },
+                });
+            },
+
+            // If pickup and return happen on the same day, the return
+            // time can't be earlier than the pickup time
+            syncMinReturnTime() {
+                const pickupDate = this.pickupAt.split(" ")[0];
+                const returnDate = this.returnAt.split(" ")[0];
+
+                if (pickupDate === "") return;
+
+                this.returnPicker?.set(
+                    "minDate",
+                    pickupDate === returnDate ? this.pickupAt : pickupDate,
+                );
+            },
+
+            get pickupError() {
+                if (!this.submitted || this.pickupAt !== "") return "";
+                return "Please select a pickup date & time.";
+            },
+
+            get returnError() {
+                if (!this.submitted || this.returnAt !== "") return "";
+                return "Please select a return date & time.";
+            },
+
+            get ageError() {
+                if (!this.submitted || this.ageConfirmed) return "";
+                return "You must confirm the driver is 25+ years.";
+            },
+
+            get isValid() {
+                return (
+                    this.pickupAt !== "" &&
+                    this.returnAt !== "" &&
+                    this.ageConfirmed
+                );
+            },
+
+            onSubmit(event: SubmitEvent) {
+                this.submitted = true;
+                if (!this.isValid) event.preventDefault();
+            },
+        }));
+    });
+</script>
