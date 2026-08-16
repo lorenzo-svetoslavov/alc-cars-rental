@@ -1,25 +1,25 @@
 ---
 const location = {
     name: "Alicante-Elche Airport (ALC)",
-    address: "Alicante-Elche Airport, 03195 L'Altet, Alicante",
+    address: "Salidas - Departures, 03195, Eixides, 03195 L'Altet, Alicante",
     pickup: "2-minute shuttle from terminal",
     phone: "+34 965 123 456",
-    hours: "7:00 AM - 11:00 PM",
+    hours: "06:00 - 23:55",
     mapsQuery: "Alicante-Elche+Airport+Car+Rental",
 };
 
 const details = [
     { title: "Address", text: location.address, icon: "pin" },
-    { title: "Contact", text: location.phone, icon: "phone" }
+    { title: "Contact", text: location.phone, icon: "phone" },
 ];
 ---
 
 <section class="bg-slate-50 py-16 px-4">
     <div class="max-w-6xl mx-auto">
-        <h2 class="text-3xl md:text-4xl font-bold">
+        <h2 class="text-3xl md:text-4xl font-bold text-center">
             Pick up your car at Alicante-Elche Airport
         </h2>
-        <p class="mt-4 max-w-xl text-slate-500">
+        <p class="mt-4 max-w-xl mx-auto text-center text-slate-500">
             Your car is waiting just minutes from the terminal. Quick pickup,
             same-spot returns, and no stress.
         </p>
@@ -30,11 +30,11 @@ const details = [
             >
                 <iframe
                     class="w-full h-full min-h-80 lg:min-h-104"
-                    src={`https://www.google.com/maps?q=${location.mapsQuery}&z=14&output=embed`}
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6263.308787915822!2d-0.5555298236576063!3d38.28750358245906!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd624a1a4da6fcbb%3A0x23206dc85def3ffb!2s%5BP%5D%20ALC%20Valet%20Parking%20Alicante!5e0!3m2!1ses!2ses!4v1786873479885!5m2!1ses!2ses"
                     title={`Map of ${location.name}`}
                     loading="lazy"
                     referrerpolicy="no-referrer-when-downgrade"
-                    style="border:0"
+                    style="border:0;"
                     allowfullscreen></iframe>
             </div>
 
@@ -45,12 +45,24 @@ const details = [
                     class="rounded-xl bg-slate-50 border-l-4 border-orange-500 p-5"
                 >
                     <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" class="w-5 h-5 text-orange-500" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            class="w-5 h-5 text-orange-500"
+                            viewBox="0 0 24 24"
+                            ><circle cx="12" cy="12" r="8.5"></circle><path
+                                d="M12 7.5V12l3 1.8"></path></svg
+                        >
                         <h3 class="text-lg font-bold">Opening Hours</h3>
                     </div>
                     <p class="mt-2 text-sm text-slate-500">
                         Monday to Sunday: <span
-                            class="font-bold text-orange-500">{location.hours}</span
+                            class="font-bold text-orange-500"
+                            >{location.hours}</span
                         >
                     </p>
                 </div>
@@ -95,9 +107,7 @@ const details = [
                                         {detail.title}
                                     </h3>
                                 </div>
-                                <p
-                                    class="mt-2 text-sm text-slate-500"
-                                >
+                                <p class="mt-2 text-sm text-slate-500">
                                     {detail.text}
                                 </p>
                             </article>
@@ -143,7 +153,8 @@ const details = [
                             stroke-linejoin="round"
                         >
                             <path d="M14 4h6v6M20 4l-8 8"></path>
-                            <path d="M18 14v5a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 19V7.5A1.5 1.5 0 015 6h5"
+                            <path
+                                d="M18 14v5a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 19V7.5A1.5 1.5 0 015 6h5"
                             ></path>
                         </svg>
                     </a>
