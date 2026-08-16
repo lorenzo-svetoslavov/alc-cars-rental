@@ -1,11 +1,15 @@
 ---
-import type { CarCategory, FuelType, Transmission } from "@/types/car";
+import RentalSearchFields from "@/components/shared/RentalSearchFields.astro";
+import { rentalSearchData } from "@/lib/rental-search";
+import { carOptions } from "@/types/car";
 
 interface Props {
     category?: string;
     transmission?: string;
     fuel?: string;
     maxPrice?: string;
+    pickupAt?: string;
+    returnAt?: string;
     action?: string;
 }
 
@@ -14,41 +18,30 @@ const {
     transmission = "",
     fuel = "",
     maxPrice = "",
+    pickupAt = "",
+    returnAt = "",
     action = "/rent-a-car",
 } = Astro.props;
 
-const categories: { value: CarCategory; label: string }[] = [
-    { value: "economy", label: "Economy" },
-    { value: "compact", label: "Compact" },
-    { value: "suv", label: "SUV" },
-    { value: "van", label: "Van" },
-    { value: "luxury", label: "Luxury" },
-];
-
-const transmissions: { value: Transmission; label: string }[] = [
-    { value: "manual", label: "Manual" },
-    { value: "automatic", label: "Automatic" },
-];
-
-const fuels: { value: FuelType; label: string }[] = [
-    { value: "gasoline", label: "Gasoline" },
-    { value: "diesel", label: "Diesel" },
-    { value: "hybrid", label: "Hybrid" },
-    { value: "electric", label: "Electric" },
-];
+const categories = carOptions("category");
+const transmissions = carOptions("transmission");
+const fuels = carOptions("fuel");
 
 const selectClass =
     "select select-bordered w-full focus:border-slate-400 focus:outline-slate-400";
-const labelClass = "text-sm font-medium text-slate-600 mb-1 block";
+const labelClass = "text-sm font-bold mb-1";
 ---
 
 <form
+    x-data={rentalSearchData({ pickupAt, returnAt, requireDates: false })}
     method="get"
     action={action}
+    @submit="onSubmit($event)"
     class="rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6"
 >
+    <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+        <RentalSearchFields />
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
             <label class={labelClass} for="category">Category</label>
             <select id="category" name="category" class={selectClass}>
