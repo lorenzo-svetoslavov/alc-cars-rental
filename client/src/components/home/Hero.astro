@@ -1,6 +1,7 @@
 ---
+import RentalSearchFields from "@/components/shared/RentalSearchFields.astro";
 import hero from "@/assets/home/hero-rental-cars.webp";
-import "flatpickr/dist/flatpickr.min.css";
+import { rentalSearchData } from "@/lib/rental-search";
 ---
 
 <div class="hero min-h-screen" style={`background-image: url(${hero.src});`}>
@@ -14,55 +15,13 @@ import "flatpickr/dist/flatpickr.min.css";
             </p>
 
             <form
-                x-data="heroSearch"
+                x-data={rentalSearchData({ requireAge: true })}
                 method="get"
                 action="/rent-a-car"
                 @submit="onSubmit($event)"
                 class="bg-white/80 rounded-xl shadow-lg p-4 flex flex-col gap-3 text-neutral mb-5"
             >
-                <div class="flex flex-col text-left">
-                    <label for="pickup-date" class="text-sm font-bold mb-1"
-                        >Pickup date &amp; time</label
-                    >
-                    <input
-                        id="pickup-date"
-                        name="pickup"
-                        type="text"
-                        placeholder="Select date & time"
-                        x-ref="pickupInput"
-                        x-model="pickupAt"
-                        class="input input-bordered w-full"
-                    />
-                    <p
-                        x-show="pickupError"
-                        x-text="pickupError"
-                        x-cloak
-                        class="text-sm text-red-600 mt-1"
-                    >
-                    </p>
-                </div>
-
-                <div class="flex flex-col text-left">
-                    <label for="return-date" class="text-sm font-bold mb-1"
-                        >Return date &amp; time</label
-                    >
-                    <input
-                        id="return-date"
-                        name="return"
-                        type="text"
-                        placeholder="Select date & time"
-                        x-ref="returnInput"
-                        x-model="returnAt"
-                        class="input input-bordered w-full"
-                    />
-                    <p
-                        x-show="returnError"
-                        x-text="returnError"
-                        x-cloak
-                        class="text-sm text-red-600 mt-1"
-                    >
-                    </p>
-                </div>
+                <RentalSearchFields />
 
                 <div class="flex flex-col text-left">
                     <label for="pickup-return-location" class="text-sm font-bold mb-1"
@@ -107,98 +66,3 @@ import "flatpickr/dist/flatpickr.min.css";
         </div>
     </div>
 </div>
-
-<script>
-    import Alpine from "alpinejs";
-    import flatpickr from "flatpickr";
-    import type { Instance } from "flatpickr/dist/types/instance";
-
-    // Blocked holidays (month is 0-11, any year)
-    const isBlockedDate = (date: Date) =>
-        (date.getMonth() === 11 && date.getDate() === 25) ||
-        (date.getMonth() === 0 && date.getDate() === 1);
-
-    const dateTimeOptions = {
-        enableTime: true,
-        time_24hr: true,
-        dateFormat: "Y-m-d H:i",
-        minuteIncrement: 5,
-        minTime: "06:00",
-        maxTime: "23:55",
-        defaultHour: 10,
-        minDate: "today",
-        disable: [isBlockedDate],
-    };
-
-    document.addEventListener("alpine:init", () => {
-        Alpine.data("heroSearch", () => ({
-            pickupAt: "",
-            returnAt: "",
-            ageConfirmed: false,
-            submitted: false,
-            returnPicker: null as Instance | null,
-
-            init() {
-                this.returnPicker = flatpickr(this.$refs.returnInput, {
-                    ...dateTimeOptions,
-                    onChange: (_dates, value) => {
-                        this.returnAt = value;
-                        this.syncMinReturnTime();
-                    },
-                });
-
-                flatpickr(this.$refs.pickupInput, {
-                    ...dateTimeOptions,
-                    onChange: (dates, value) => {
-                        this.pickupAt = value;
-                        // Return date can't be before the pickup date
-                        this.returnPicker?.set("minDate", dates[0]);
-                        this.syncMinReturnTime();
-                    },
-                });
-            },
-
-            // If pickup and return happen on the same day, the return
-            // time can't be earlier than the pickup time
-            syncMinReturnTime() {
-                const pickupDate = this.pickupAt.split(" ")[0];
-                const returnDate = this.returnAt.split(" ")[0];
-
-                if (pickupDate === "") return;
-
-                this.returnPicker?.set(
-                    "minDate",
-                    pickupDate === returnDate ? this.pickupAt : pickupDate,
-                );
-            },
-
-            get pickupError() {
-                if (!this.submitted || this.pickupAt !== "") return "";
-                return "Please select a pickup date & time.";
-            },
-
-            get returnError() {
-                if (!this.submitted || this.returnAt !== "") return "";
-                return "Please select a return date & time.";
-            },
-
-            get ageError() {
-                if (!this.submitted || this.ageConfirmed) return "";
-                return "You must confirm the driver is 25+ years.";
-            },
-
-            get isValid() {
-                return (
-                    this.pickupAt !== "" &&
-                    this.returnAt !== "" &&
-                    this.ageConfirmed
-                );
-            },
-
-            onSubmit(event: SubmitEvent) {
-                this.submitted = true;
-                if (!this.isValid) event.preventDefault();
-            },
-        }));
-    });
-</script>

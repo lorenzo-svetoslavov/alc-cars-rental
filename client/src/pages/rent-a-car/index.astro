@@ -8,6 +8,9 @@ import Header from "@/layouts/Header.astro";
 import { getCars } from "@/lib/cars";
 
 const cars = await getCars();
+
+const pickupAt = Astro.url.searchParams.get("pickup") ?? "";
+const returnAt = Astro.url.searchParams.get("return") ?? "";
 ---
 
 <BaseLayout title="Fleet · ALC Cars">
@@ -20,7 +23,7 @@ const cars = await getCars();
                 Find the perfect car for your next trip
             </p>
         </header>
-        <CarFilters />
+        <CarFilters pickupAt={pickupAt} returnAt={returnAt} />
         <FleetGrid cars={cars} />
     </main>
 
