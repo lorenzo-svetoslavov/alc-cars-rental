@@ -5,25 +5,25 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import Footer from "@/layouts/Footer.astro";
 import Header from "@/layouts/Header.astro";
 
-import { getCars } from "@/lib/cars";
+import { getCars, parseCarFilters } from "@/lib/cars";
 
-const cars = await getCars();
-
-const pickupAt = Astro.url.searchParams.get("pickup") ?? "";
-const returnAt = Astro.url.searchParams.get("return") ?? "";
+// The filters form submits by GET to this same page, so the selected values
+// arrive in the query string: we validate them and query Supabase with them
+const filters = parseCarFilters(Astro.url.searchParams);
+const cars = await getCars(filters);
 ---
 
 <BaseLayout title="Fleet · ALC Cars">
     <Header />
 
-    <main class="max-w-7xl mx-auto px-4 py-12 space-y-10">
+    <main class="max-w-7xl mx-auto px-4 py-12 space-y-10 flex-1 w-full">
         <header class="text-center">
             <h1 class="text-3xl font-bold">Car Rental</h1>
             <p class="text-slate-500 mt-2">
                 Find the perfect car for your next trip
             </p>
         </header>
-        <CarFilters pickupAt={pickupAt} returnAt={returnAt} />
+        <CarFilters filters={filters} />
         <FleetGrid cars={cars} />
     </main>
 
