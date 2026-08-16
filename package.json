@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev:admin": "pnpm run dev --workspace=admin",
-    "dev:client": "pnpm run dev --workspace=client",
+    "dev:admin": "pnpm --filter admin run dev",
+    "dev:client": "pnpm --filter client run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
