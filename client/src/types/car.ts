@@ -7,14 +7,18 @@ export const CAR_OPTIONS = {
         gasoline: "Gasoline",
         diesel: "Diesel",
         hybrid: "Hybrid",
+        plug_in_hybrid: "Plug-in hybrid",
         electric: "Electric",
+        lpg: "LPG",
     },
     category: {
-        economy: "Economy",
+        mini: "Mini",
         compact: "Compact",
+        sedan: "Sedan",
         suv: "SUV",
+        minivan: "Minivan",
         van: "Van",
-        luxury: "Luxury",
+        premium: "Premium",
     },
 } as const;
 
@@ -23,8 +27,14 @@ export type Transmission = keyof typeof CAR_OPTIONS.transmission;
 export type FuelType = keyof typeof CAR_OPTIONS.fuel;
 export type CarCategory = keyof typeof CAR_OPTIONS.category;
 
+/** Options of a group, ready to render a <select>: [{ value, label }, ...] */
 export function carOptions(group: CarOptionGroup) {
     return Object.entries(CAR_OPTIONS[group]).map(([value, label]) => ({ value, label }));
+}
+
+/** Values of a group, e.g. ["manual", "automatic"] for transmission */
+export function carOptionValues(group: CarOptionGroup) {
+    return Object.keys(CAR_OPTIONS[group]);
 }
 
 export interface Car {
