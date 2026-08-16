@@ -1,34 +1,26 @@
 ---
+import CarSelectFilter from "@/components/fleet/CarSelectFilter.astro";
 import RentalSearchFields from "@/components/shared/RentalSearchFields.astro";
+import type { CarFilters } from "@/lib/cars";
 import { rentalSearchData } from "@/lib/rental-search";
-import { carOptions } from "@/types/car";
 
 interface Props {
-    category?: string;
-    transmission?: string;
-    fuel?: string;
-    maxPrice?: string;
-    pickupAt?: string;
-    returnAt?: string;
+    /** Filters already applied to the listing, so the form keeps its state */
+    filters?: CarFilters;
     action?: string;
 }
+
+const { filters = {}, action = "/rent-a-car" } = Astro.props;
 
 const {
     category = "",
     transmission = "",
     fuel = "",
-    maxPrice = "",
+    maxPrice,
     pickupAt = "",
     returnAt = "",
-    action = "/rent-a-car",
-} = Astro.props;
+} = filters;
 
-const categories = carOptions("category");
-const transmissions = carOptions("transmission");
-const fuels = carOptions("fuel");
-
-const selectClass =
-    "select select-bordered w-full focus:border-slate-400 focus:outline-slate-400";
 const labelClass = "text-sm font-bold mb-1";
 ---
 
@@ -42,47 +34,26 @@ const labelClass = "text-sm font-bold mb-1";
     <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <RentalSearchFields />
 
-        <div>
-            <label class={labelClass} for="category">Category</label>
-            <select id="category" name="category" class={selectClass}>
-                <option value="">All categories</option>
-                {
-                    categories.map((c) => (
-                        <option value={c.value} selected={c.value === category}>
-                            {c.label}
-                        </option>
-                    ))
-                }
-            </select>
-        </div>
+        <CarSelectFilter
+            group="category"
+            label="Category"
+            placeholder="All categories"
+            selected={category}
+        />
 
-        <div>
-            <label class={labelClass} for="transmission">Transmission</label>
-            <select id="transmission" name="transmission" class={selectClass}>
-                <option value="">Any transmission</option>
-                {
-                    transmissions.map((t) => (
-                        <option value={t.value} selected={t.value === transmission}>
-                            {t.label}
-                        </option>
-                    ))
-                }
-            </select>
-        </div>
+        <CarSelectFilter
+            group="transmission"
+            label="Transmission"
+            placeholder="Any transmission"
+            selected={transmission}
+        />
 
-        <div>
-            <label class={labelClass} for="fuel">Fuel</label>
-            <select id="fuel" name="fuel" class={selectClass}>
-                <option value="">Any fuel</option>
-                {
-                    fuels.map((f) => (
-                        <option value={f.value} selected={f.value === fuel}>
-                            {f.label}
-                        </option>
-                    ))
-                }
-            </select>
-        </div>
+        <CarSelectFilter
+            group="fuel"
+            label="Fuel"
+            placeholder="Any fuel"
+            selected={fuel}
+        />
 
         <div>
             <label class={labelClass} for="maxPrice">Max price / day</label>

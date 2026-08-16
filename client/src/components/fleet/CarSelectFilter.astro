@@ -1,0 +1,32 @@
+---
+import { carOptions, type CarOptionGroup } from "@/types/car";
+
+interface Props {
+    group: CarOptionGroup;
+    label: string;
+    placeholder: string;
+    selected?: string;
+}
+
+const { group, label, placeholder, selected = "" } = Astro.props;
+
+const options = carOptions(group);
+---
+
+<div>
+    <label class="text-sm font-bold mb-1" for={group}>{label}</label>
+    <select
+        id={group}
+        name={group}
+        class="select select-bordered w-full focus:border-slate-400 focus:outline-slate-400"
+    >
+        <option value="">{placeholder}</option>
+        {
+            options.map((option) => (
+                <option value={option.value} selected={option.value === selected}>
+                    {option.label}
+                </option>
+            ))
+        }
+    </select>
+</div>
