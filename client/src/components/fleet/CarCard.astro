@@ -3,9 +3,11 @@ import type { CarSummary } from "@/types/car";
 
 interface Props {
     car: CarSummary;
+    /** When false, selecting a car asks for the dates instead of opening it */
+    hasDates?: boolean;
 }
 
-const { car } = Astro.props;
+const { car, hasDates = true } = Astro.props;
 
 const {
     id,
@@ -24,6 +26,8 @@ const {
 
 const name = `${make} ${model} ${model_year}`;
 
+const selectClass =
+    "btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none mt-auto";
 ---
 
 <article
@@ -76,20 +80,27 @@ const name = `${make} ${model} ${model_year}`;
         </dl>
 
         {
-            available ? (
-                <a
-                    href={`/rent-a-car/${id}`}
-                    class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none mt-auto"
-                >
-                    Select
-                </a>
-            ) : (
+            !available ? (
                 <button
                     type="button"
                     disabled
                     class="btn bg-slate-300 text-slate-500 border-none shadow-none mt-auto cursor-not-allowed"
                 >
                     Not available
+                </button>
+            ) : hasDates ? (
+                <a href={`/rent-a-car/${id}`} class={selectClass}>
+                    Select
+                </a>
+            ) : (
+                // Availability can't be confirmed yet: CarDatesModal asks for the dates
+                <button
+                    type="button"
+                    x-data="{}"
+                    @click="$dispatch('dates-required')"
+                    class={selectClass}
+                >
+                    Select
                 </button>
             )
         }

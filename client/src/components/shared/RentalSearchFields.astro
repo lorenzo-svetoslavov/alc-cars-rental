@@ -1,11 +1,21 @@
 ---
 import "flatpickr/dist/flatpickr.min.css";
+
+interface Props {
+    /** Prefix for the field ids, needed when the fields appear twice on a page */
+    idPrefix?: string;
+}
+
+const { idPrefix = "" } = Astro.props;
+
+const pickupId = `${idPrefix}pickup-date`;
+const returnId = `${idPrefix}return-date`;
 ---
 
 <div class="flex flex-col text-left">
-    <label class="text-sm font-bold mb-1" for="pickup-date">Pickup date &amp; time</label>
+    <label class="text-sm font-bold mb-1" for={pickupId}>Pickup date &amp; time</label>
     <input
-        id="pickup-date"
+        id={pickupId}
         name="pickup"
         type="text"
         placeholder="Select date & time"
@@ -17,9 +27,9 @@ import "flatpickr/dist/flatpickr.min.css";
 </div>
 
 <div class="flex flex-col text-left">
-    <label class="text-sm font-bold mb-1" for="return-date">Return date &amp; time</label>
+    <label class="text-sm font-bold mb-1" for={returnId}>Return date &amp; time</label>
     <input
-        id="return-date"
+        id={returnId}
         name="return"
         type="text"
         placeholder="Select date & time"

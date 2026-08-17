@@ -1,0 +1,94 @@
+---
+import RentalSearchFields from "@/components/shared/RentalSearchFields.astro";
+import { rentalSearchData } from "@/lib/rental-search";
+
+interface Props {
+    /** Id of the filters form the selected dates are poured into */
+    formId?: string;
+}
+
+const { formId = "car-filters-form" } = Astro.props;
+---
+
+{/*
+  daisyUI modal in its class-based variant instead of <dialog>: showModal()
+  moves the dialog to the top layer, and the flatpickr calendar — appended to
+  document.body — would end up painted underneath it
+*/}
+<div
+    x-data={`carDatesModal('${formId}')`}
+    @dates-required.window="open = true"
+    @keydown.escape.window="close()"
+    :class="{ 'modal-open': open }"
+    x-cloak
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="car-dates-modal-title"
+    class="modal"
+>
+    <div class="modal-box" x-data={rentalSearchData({ requireDates: true })}>
+        <h3 id="car-dates-modal-title" class="text-lg font-bold">
+            Select your dates
+        </h3>
+        <p class="text-sm text-slate-500 mt-1">
+            Choose a pickup and return date & time to see which cars are
+            available for your trip.
+        </p>
+
+        <div class="grid gap-4 sm:grid-cols-2 mt-5">
+            <RentalSearchFields idPrefix="modal-" />
+        </div>
+
+        <div class="modal-action">
+            <button type="button" class="btn btn-ghost text-slate-600" @click="close()">
+                Cancel
+            </button>
+            <button
+                type="button"
+                @click="submitted = true; isValid && apply(pickupAt, returnAt)"
+                class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
+            >
+                Apply dates
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-backdrop bg-black/40" @click="close()"></div>
+</div>
+
+<script>
+    import Alpine from "alpinejs";
+
+    /** Writes the value and lets the x-model of the filters form know about it */
+    const setField = (form: HTMLFormElement, name: string, value: string) => {
+        const field = form.elements.namedItem(name);
+        if (!(field instanceof HTMLInputElement)) return;
+
+        field.value = value;
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    document.addEventListener("alpine:init", () => {
+        Alpine.data("carDatesModal", (formId: string) => ({
+            open: false,
+
+            close() {
+                this.open = false;
+            },
+
+            // The nested rentalSearch component owns the dates, so it hands
+            // them over already validated
+            apply(pickupAt: string, returnAt: string) {
+                const form = document.getElementById(formId);
+                if (!(form instanceof HTMLFormElement)) return;
+
+                setField(form, "pickup", pickupAt);
+                setField(form, "return", returnAt);
+
+                this.close();
+                // Submitting keeps every other filter the form already holds
+                form.requestSubmit();
+            },
+        }));
+    });
+</script>

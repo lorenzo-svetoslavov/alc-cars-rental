@@ -4,9 +4,11 @@ import type { CarSummary } from "@/types/car";
 
 interface Props {
     cars: CarSummary[];
+    /** Whether the listing is already filtered by a date range */
+    hasDates?: boolean;
 }
 
-const { cars } = Astro.props;
+const { cars, hasDates = true } = Astro.props;
 ---
 
 <div class="flex items-center justify-between mb-6">
@@ -24,7 +26,7 @@ const { cars } = Astro.props;
     ) : (
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {cars.map((car) => (
-                <CarCard car={car} />
+                <CarCard car={car} hasDates={hasDates} />
             ))}
         </div>
     )

@@ -1,4 +1,5 @@
 ---
+import CarDatesModal from "@/components/fleet/CarDatesModal.astro";
 import CarFilters from "@/components/fleet/CarFilters.astro";
 import FleetGrid from "@/components/fleet/FleetGrid.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -11,6 +12,10 @@ import { getCars, parseCarFilters } from "@/lib/cars";
 // arrive in the query string: we validate them and query Supabase with them
 const filters = parseCarFilters(Astro.url.searchParams);
 const cars = await getCars(filters);
+
+// Without both dates the listing can't tell what's really available, so
+// selecting a car opens the modal instead of its detail page
+const hasDates = Boolean(filters.pickupAt && filters.returnAt);
 ---
 
 <BaseLayout title="Fleet · ALC Cars">
@@ -24,8 +29,10 @@ const cars = await getCars(filters);
             </p>
         </header>
         <CarFilters filters={filters} />
-        <FleetGrid cars={cars} />
+        <FleetGrid cars={cars} hasDates={hasDates} />
     </main>
+
+    {!hasDates && <CarDatesModal />}
 
     <Footer />
 </BaseLayout>
