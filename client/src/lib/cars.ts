@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { supabase } from "@/lib/supabase";
-import { carOptionValues, type Car, type CarOptionGroup } from "@/types/car";
+import {
+    carOptionValues,
+    type Car,
+    type CarOptionGroup,
+    type CarSummary,
+} from "@/types/car";
 
 // ---------------------------------------------------------------------------
 // 1. Filters coming from the URL (?category=suv&maxPrice=80&pickup=...)
@@ -63,70 +68,39 @@ export function parseCarFilters(params: URLSearchParams): CarFilters {
 // ---------------------------------------------------------------------------
 
 /**
- * Ids of the cars already booked during the requested dates.
+ * Postgres expects "2026-08-16T10:30", flatpickr writes it with a space.
  *
- * Two date ranges overlap when each one starts before the other one ends,
- * so a booking blocks the car if it starts before our return and ends after
- * our pickup. Cancelled bookings don't count.
+ * Se manda la hora de pared tal cual, sin zona: `search_cars` la interpreta en
+ * Europe/Madrid. Añadir aquí un offset fijo rompería con el horario de verano.
  */
-async function getBookedCarIds(pickupAt: string, returnAt: string): Promise<string[]> {
-    // Postgres expects "2026-08-16T10:30", flatpickr uses a space
-    const pickup = pickupAt.replace(" ", "T");
-    const dropoff = returnAt.replace(" ", "T");
-
-    const { data, error } = await supabase
-        .from("bookings")
-        .select("car_id")
-        .is("cancelled_at", null)
-        .lt("pickup_at", dropoff)
-        .gt("dropoff_at", pickup);
-
-    if (error) {
-        throw new Error(`Error al obtener las reservas: ${error.message}`);
-    }
-
-    return (data ?? []).map((booking) => booking.car_id as string);
+function toTimestamp(dateTime: string) {
+    return dateTime.replace(" ", "T");
 }
 
-/** Cars shown in the catalogue, narrowed down by the selected filters */
-export async function getCars(filters: CarFilters = {}): Promise<Car[]> {
-    let query = supabase
-        .from("cars")
-        .select("*")
-        .order("available", { ascending: false })
-        .order("daily_rate", { ascending: true });
-
-    if (filters.category) {
-        query = query.eq("category", filters.category);
-    }
-
-    if (filters.transmission) {
-        query = query.eq("transmission", filters.transmission);
-    }
-
-    if (filters.fuel) {
-        query = query.eq("fuel", filters.fuel);
-    }
-
-    if (filters.maxPrice) {
-        query = query.lte("daily_rate", filters.maxPrice);
-    }
-
+/**
+ * Cars shown in the catalogue, narrowed down by the selected filters.
+ *
+ * Everything (filters, availability and order) is resolved by the `search_cars`
+ * function in Postgres: one single round-trip, and the overlap check stays in
+ * the database instead of travelling as a list of ids inside the query string.
+ */
+export async function getCars(filters: CarFilters = {}): Promise<CarSummary[]> {
     // Dates only filter when both are selected: a single date can't define a range
-    if (filters.pickupAt && filters.returnAt) {
-        const bookedCarIds = await getBookedCarIds(filters.pickupAt, filters.returnAt);
+    const { pickupAt, returnAt } = filters;
+    const dateRange = pickupAt && returnAt ? { pickupAt, returnAt } : null;
 
-        if (bookedCarIds.length > 0) {
-            // PostgREST syntax for "id NOT IN (a,b,c)"
-            query = query.not("id", "in", `(${bookedCarIds.join(",")})`);
-        }
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase.rpc("search_cars", {
+        p_category: filters.category ?? null,
+        p_transmission: filters.transmission ?? null,
+        p_fuel: filters.fuel ?? null,
+        p_max_price: filters.maxPrice ?? null,
+        p_pickup: dateRange ? toTimestamp(dateRange.pickupAt) : null,
+        p_dropoff: dateRange ? toTimestamp(dateRange.returnAt) : null,
+    });
 
     if (error) {
         throw new Error(`Error al obtener los coches: ${error.message}`);
     }
 
-    return (data ?? []) as Car[];
+    return (data ?? []) as CarSummary[];
 }
