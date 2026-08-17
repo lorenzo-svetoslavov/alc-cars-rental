@@ -1,9 +1,9 @@
 ---
 import CarCard from "@/components/fleet/CarCard.astro";
-import type { Car } from "@/types/car";
+import type { CarSummary } from "@/types/car";
 
 interface Props {
-    cars: Car[];
+    cars: CarSummary[];
 }
 
 const { cars } = Astro.props;

@@ -20,8 +20,6 @@ const {
     pickupAt = "",
     returnAt = "",
 } = filters;
-
-const labelClass = "text-sm font-bold mb-1";
 ---
 
 <form
@@ -56,14 +54,14 @@ const labelClass = "text-sm font-bold mb-1";
         />
 
         <div>
-            <label class={labelClass} for="maxPrice">Max price / day</label>
+            <label class="text-sm font-bold mb-1" for="maxPrice">Max price / day</label>
             <div class="relative">
                 <input
                     type="number"
                     id="maxPrice"
                     name="maxPrice"
                     min="0"
-                    step="1"
+                    step="5"
                     placeholder="No limit"
                     value={maxPrice}
                     class="input input-bordered w-full pr-8 focus:border-slate-400 focus:outline-slate-400"

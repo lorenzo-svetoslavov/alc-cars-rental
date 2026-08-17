@@ -37,6 +37,10 @@ export function carOptionValues(group: CarOptionGroup) {
     return Object.keys(CAR_OPTIONS[group]);
 }
 
+/**
+ * Fila completa de `cars`, tal cual está en la base de datos.
+ * Para el catálogo público usa `CarSummary`: `plate_number` es dato interno.
+ */
 export interface Car {
     id: string;
     make: string;
@@ -57,3 +61,24 @@ export interface Car {
     created_at: string;
     updated_at: string;
 }
+
+/**
+ * Lo que devuelve `search_cars` y lo único que necesita una tarjeta del
+ * catálogo. Si añades un campo aquí, añádelo también al `returns table` de la
+ * función en Postgres.
+ */
+export type CarSummary = Pick<
+    Car,
+    | "id"
+    | "make"
+    | "model"
+    | "model_year"
+    | "transmission"
+    | "fuel"
+    | "seats"
+    | "doors"
+    | "air_conditioning"
+    | "daily_rate"
+    | "available"
+    | "image_url"
+>;
