@@ -1,0 +1,271 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="Create account · ALC Cars">
+	<Header />
+
+	<main
+		class="flex-1 flex items-center justify-center bg-orange-50 px-4 py-12"
+	>
+		<div class="w-full max-w-md">
+			<div class="card bg-white shadow-xl">
+				<div class="card-body p-8">
+					<div class="text-center mb-6">
+						<h1 class="text-2xl font-bold text-gray-900">
+							Create account
+						</h1>
+						<p class="text-gray-500 mt-1">
+							Sign up to manage your bookings
+						</p>
+					</div>
+
+					<form x-data="registerForm()" @submit.prevent="submit()" class="flex flex-col gap-4">
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="nombre"
+								class="font-semibold text-gray-700">First name</label
+							>
+							<input
+								id="first-name"
+								type="text"
+								placeholder="Your first name"
+								required
+								x-model="form.firstName"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="apellidos"
+								class="font-semibold text-gray-700"
+								>Last name</label
+							>
+							<input
+								id="last-name"
+								type="text"
+								placeholder="Your last name"
+								required
+								x-model="form.lastName"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="telefono"
+								class="font-semibold text-gray-700"
+								>Phone</label
+							>
+							<input
+								id="phone"
+								type="tel"
+								placeholder="+34 600 000 000"
+								required
+								x-model="form.phone"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="dni"
+								class="font-semibold text-gray-700"
+								>DNI/NIE</label
+							>
+							<input
+								id="dni"
+								type="text"
+								placeholder="12345678A"
+								required
+								x-model="form.dni"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="licencia"
+								class="font-semibold text-gray-700"
+								>Driver's license</label
+							>
+							<input
+								id="drivers-license"
+								type="text"
+								placeholder="License number"
+								required
+								x-model="form.driversLicense"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="address"
+								class="font-semibold text-gray-700"
+								>Address</label
+							>
+							<input
+								id="address"
+								type="text"
+								placeholder="Your address"
+								required
+								x-model="form.address"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="email"
+								class="font-semibold text-gray-700">Email</label
+							>
+							<input
+								id="email"
+								type="email"
+								placeholder="you@email.com"
+								required
+								x-model="form.email"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="password"
+								class="font-semibold text-gray-700"
+								>Password</label
+							>
+							<input
+								id="password"
+								type="password"
+								placeholder="••••••••"
+								required
+								x-model="form.password"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1.5">
+							<label
+								for="password-confirm"
+								class="font-semibold text-gray-700"
+								>Confirm password</label
+							>
+							<input
+								id="password-confirm"
+								type="password"
+								placeholder="••••••••"
+								required
+								x-model="form.passwordConfirm"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<p
+							x-show="passwordError"
+							x-text="passwordError"
+							x-cloak
+							class="text-sm text-red-600"
+						></p>
+
+						<p
+							x-show="error"
+							x-text="error"
+							x-cloak
+							class="text-sm text-red-600"
+						></p>
+
+						<button
+							type="submit"
+							:disabled="loading"
+							class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-md w-full mt-2"
+							x-text="loading ? 'Creating account...' : 'Create account'"
+						>
+						</button>
+					</form>
+
+					<div class="divider my-4 text-gray-400">or</div>
+
+					<p class="text-center text-sm text-gray-600">
+						Already have an account?
+						<a
+							href="/auth/login"
+							class="font-semibold text-orange-600 hover:text-orange-700 hover:underline"
+						>
+							Log in
+						</a>
+					</p>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<Footer />
+</BaseLayout>
+
+<script>
+	import Alpine from "alpinejs";
+	import { supabase } from "@/lib/supabase";
+
+	document.addEventListener("alpine:init", () => {
+		Alpine.data("registerForm", () => ({
+			form: {
+				firstName: "",
+				lastName: "",
+				phone: "",
+				dni: "",
+				driversLicense: "",
+				address: "",
+				email: "",
+				password: "",
+				passwordConfirm: "",
+			},
+			loading: false,
+			error: "",
+			passwordError: "",
+
+			toTitleCase(str) {
+				return str.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+			},
+
+			async submit() {
+				this.passwordError = "";
+				this.error = "";
+
+				if (this.form.password !== this.form.passwordConfirm) {
+					this.passwordError = "Passwords do not match";
+					return;
+				}
+
+				this.loading = true;
+
+				const { error } = await supabase.auth.signUp({
+					email: this.form.email.toLowerCase().trim(),
+					password: this.form.password,
+					options: {
+						data: {
+							first_name: this.toTitleCase(this.form.firstName),
+							last_name: this.toTitleCase(this.form.lastName),
+							phone: this.form.phone.trim(),
+							dni: this.form.dni.trim().toUpperCase(),
+							drivers_license: this.form.driversLicense.trim().toUpperCase(),
+							address: this.toTitleCase(this.form.address),
+						},
+					},
+				});
+
+				if (error) {
+					this.error = error.message;
+					this.loading = false;
+					return;
+				}
+
+				window.location.href = "/";
+			},
+		}));
+	});
+</script>
