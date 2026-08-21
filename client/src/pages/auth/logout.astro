@@ -1,6 +1,24 @@
 ---
-import { supabase } from "@/lib/supabase";
-
-await supabase.auth.signOut();
-return Astro.redirect("/");
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
 ---
+
+<BaseLayout title="Cerrando sesión · ALC Cars">
+	<Header />
+	<main class="flex-1 flex items-center justify-center bg-orange-50 px-4 py-12">
+		<div class="text-center">
+			<p class="text-gray-600">Cerrando sesión...</p>
+		</div>
+	</main>
+</BaseLayout>
+
+<script>
+	import { supabase } from "@/lib/supabase";
+
+	async function logout() {
+		await supabase.auth.signOut();
+		window.location.href = "/";
+	}
+
+	logout();
+</script>

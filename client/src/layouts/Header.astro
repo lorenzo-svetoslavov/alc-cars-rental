@@ -10,12 +10,12 @@ import logo from "@/assets/logo-alc-cars.webp";
 		</a>
 	</div>
 	<div class="flex-none">
-		<ul class="menu menu-horizontal px-1 flex items-center" x-data="headerAuth()" x-init="init()">
+		<ul class="menu menu-horizontal px-1 flex items-center" x-data="headerAuth()">
 			<li class="font-bold"><a href="/">HOME</a></li>
 			<li class="font-bold"><a href="/rent-a-car">RENT A CAR</a></li>
 			<li class="font-bold"><a>LOCATION</a></li>
 
-			<template x-if="!session">
+			<template x-if="!loading && !session">
 				<li class="font-bold">
 					<a href="/auth/login"><button class="btn border-none shadow-none">LOG IN</button></a>
 				</li>
@@ -24,7 +24,7 @@ import logo from "@/assets/logo-alc-cars.webp";
 				</li>
 			</template>
 
-			<template x-if="session">
+			<template x-if="!loading && session">
 				<li>
 					<div class="dropdown dropdown-end">
 						<label tabindex="0" class="btn btn-ghost btn-circle avatar">
@@ -32,7 +32,7 @@ import logo from "@/assets/logo-alc-cars.webp";
 						</label>
 						<ul tabindex="0" class="menu menu-sm dropdown-content bg-white rounded-box z-50 mt-3 w-52 p-2 shadow">
 							<li>
-								<a href="/my-account" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-orange-50">
+								<a href="/my-account" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-orange-50 text-gray-800">
 									<svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
 									My Account
 								</a>
@@ -58,21 +58,24 @@ import logo from "@/assets/logo-alc-cars.webp";
 	document.addEventListener("alpine:init", () => {
 		Alpine.data("headerAuth", () => ({
 			session: null,
+			loading: true,
 
 			async init() {
 				const { data: { session } } = await supabase.auth.getSession();
 				this.session = session;
+				this.loading = false;
 
 				supabase.auth.onAuthStateChange((_event, session) => {
 					this.session = session;
+					this.loading = false;
 				});
 			},
 
 			getInitials() {
 				if (!this.session?.user) return "U";
 				const meta = this.session.user.user_metadata;
-				const first = meta.first_name?.[0] || "";
-				const last = meta.last_name?.[0] || "";
+				const first = meta?.first_name?.[0] || "";
+				const last = meta?.last_name?.[0] || "";
 				return (first + last).toUpperCase() || this.session.user.email?.[0]?.toUpperCase() || "U";
 			},
 		}));
