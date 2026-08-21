@@ -6,24 +6,75 @@ import logo from "@/assets/logo-alc-cars.webp";
 <div class="navbar bg-orange-500 text-white shadow-sm">
 	<div class="flex-1">
 		<a href="/">
-			<Image
-				src={logo}
-				alt="ALC Cars"
-				class="h-18 w-auto object-contain"
-			/>
+			<Image src={logo} alt="ALC Cars" class="h-18 w-auto object-contain" />
 		</a>
 	</div>
 	<div class="flex-none">
-		<ul class="menu menu-horizontal px-1 flex items-center">
+		<ul class="menu menu-horizontal px-1 flex items-center" x-data="headerAuth()" x-init="init()">
 			<li class="font-bold"><a href="/">HOME</a></li>
 			<li class="font-bold"><a href="/rent-a-car">RENT A CAR</a></li>
 			<li class="font-bold"><a>LOCATION</a></li>
-			<li class="font-bold">
-				<a href="/auth/login"
-					><button class="btn border-none shadow-none">LOG IN</button
-					></a
-				>
-			</li>
+
+			<template x-if="!session">
+				<li class="font-bold">
+					<a href="/auth/login"><button class="btn border-none shadow-none">LOG IN</button></a>
+				</li>
+				<li class="font-bold">
+					<a href="/auth/register"><button class="btn btn-ghost border-white text-white hover:bg-white/10">SIGN UP</button></a>
+				</li>
+			</template>
+
+			<template x-if="session">
+				<li>
+					<div class="dropdown dropdown-end">
+						<label tabindex="0" class="btn btn-ghost btn-circle avatar">
+							<div class="w-8 h-8 rounded-full bg-orange-200 flex items-center justify-center text-orange-700 font-bold" x-text="getInitials()"></div>
+						</label>
+						<ul tabindex="0" class="menu menu-sm dropdown-content bg-white rounded-box z-50 mt-3 w-52 p-2 shadow">
+							<li>
+								<a href="/my-account" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-orange-50">
+									<svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+									My Account
+								</a>
+							</li>
+							<li>
+								<a href="/auth/logout" class="flex items-center gap-2 px-2 py-1 rounded hover:bg-red-50 text-red-600">
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+									Log Out
+								</a>
+							</li>
+						</ul>
+					</div>
+				</li>
+			</template>
 		</ul>
 	</div>
 </div>
+
+<script>
+	import Alpine from "alpinejs";
+	import { supabase } from "@/lib/supabase";
+
+	document.addEventListener("alpine:init", () => {
+		Alpine.data("headerAuth", () => ({
+			session: null,
+
+			async init() {
+				const { data: { session } } = await supabase.auth.getSession();
+				this.session = session;
+
+				supabase.auth.onAuthStateChange((_event, session) => {
+					this.session = session;
+				});
+			},
+
+			getInitials() {
+				if (!this.session?.user) return "U";
+				const meta = this.session.user.user_metadata;
+				const first = meta.first_name?.[0] || "";
+				const last = meta.last_name?.[0] || "";
+				return (first + last).toUpperCase() || this.session.user.email?.[0]?.toUpperCase() || "U";
+			},
+		}));
+	});
+</script>

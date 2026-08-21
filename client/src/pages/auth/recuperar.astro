@@ -1,0 +1,90 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="Reset Password · ALC Cars">
+	<Header />
+
+	<main class="flex-1 flex items-center justify-center bg-orange-50 px-4 py-12">
+		<div class="w-full max-w-md">
+			<div class="card bg-white shadow-xl">
+				<div class="card-body p-8">
+					<div class="text-center mb-6">
+						<h1 class="text-2xl font-bold text-gray-900">Reset Password</h1>
+						<p class="text-gray-500 mt-1">Enter your email to receive a reset link</p>
+					</div>
+
+					<form x-data="recoveryForm()" @submit.prevent="submit()" class="flex flex-col gap-4">
+						<div class="flex flex-col gap-1.5">
+							<label for="email" class="font-semibold text-gray-700">Email</label>
+							<input
+								id="email"
+								type="email"
+								placeholder="you@email.com"
+								required
+								x-model="form.email"
+								class="input input-bordered w-full border-gray-300 focus:border-orange-500 focus:outline-none"
+							/>
+						</div>
+
+						<p x-show="error" x-text="error" x-cloak class="text-sm text-red-600"></p>
+						<p x-show="success" x-text="success" x-cloak class="text-sm text-green-600"></p>
+
+						<button
+							type="submit"
+							:disabled="loading"
+							class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-md w-full mt-2"
+							x-text="loading ? 'Sending...' : 'Send Reset Link'"
+						></button>
+					</form>
+
+					<div class="divider my-4 text-gray-400">or</div>
+
+					<p class="text-center text-sm text-gray-600">
+						<a href="/auth/login" class="font-semibold text-orange-600 hover:text-orange-700 hover:underline">Back to Login</a>
+					</p>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<Footer />
+</BaseLayout>
+
+<script>
+	import Alpine from "alpinejs";
+	import { supabase } from "@/lib/supabase";
+
+	document.addEventListener("alpine:init", () => {
+		Alpine.data("recoveryForm", () => ({
+			form: {
+				email: "",
+			},
+			loading: false,
+			error: "",
+			success: "",
+
+			async submit() {
+				this.error = "";
+				this.success = "";
+				this.loading = true;
+
+				const { error } = await supabase.auth.resetPasswordForEmail(this.form.email.toLowerCase().trim(), {
+					redirectTo: `${window.location.origin}/auth/reset-password`,
+				});
+
+				if (error) {
+					this.error = error.message;
+					this.loading = false;
+					return;
+				}
+
+				this.success = "Check your email for the password reset link";
+				this.loading = false;
+				this.form.email = "";
+			},
+		}));
+	});
+</script>

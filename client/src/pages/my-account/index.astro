@@ -1,0 +1,112 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="My Account · ALC Cars">
+	<Header />
+
+	<main class="flex-1 bg-orange-50 px-4 py-12" x-data="accountPage()" x-init="init()">
+		<div class="max-w-3xl mx-auto">
+			<div x-show="loading" class="flex items-center justify-center py-12" x-cloak>
+				<svg class="animate-spin h-8 w-8 text-orange-500" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+			</div>
+
+			<div x-show="!loading && !user" class="text-center py-12" x-cloak>
+				<svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+				<h2 class="text-xl font-semibold text-gray-900 mb-2">Please log in</h2>
+				<p class="text-gray-500 mb-6">You need to be logged in to access your account.</p>
+				<a href="/auth/login" class="btn bg-orange-500 hover:bg-orange-600 text-white">Log In</a>
+			</div>
+
+			<div x-show="!loading && user" x-cloak>
+				<div class="card bg-white shadow-xl mb-6">
+					<div class="card-body p-8">
+						<div class="flex items-center gap-4 mb-6">
+							<div class="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-2xl" x-text="getInitials()"></div>
+							<div>
+								<h1 class="text-2xl font-bold text-gray-900" x-text="getFullName()"></h1>
+								<p class="text-gray-500" x-text="user.email"></p>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label class="label"><span class="label-text text-gray-500">Phone</span></label>
+								<div class="font-medium" x-text="user.user_metadata.phone || 'Not set'"></div>
+							</div>
+							<div>
+								<label class="label"><span class="label-text text-gray-500">DNI/NIE</span></label>
+								<div class="font-medium" x-text="user.user_metadata.dni || 'Not set'"></div>
+							</div>
+							<div>
+								<label class="label"><span class="label-text text-gray-500">Driver's License</span></label>
+								<div class="font-medium" x-text="user.user_metadata.drivers_license || 'Not set'"></div>
+							</div>
+							<div>
+								<label class="label"><span class="label-text text-gray-500">Address</span></label>
+								<div class="font-medium" x-text="user.user_metadata.address || 'Not set'"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="card bg-white shadow-xl">
+					<div class="card-body p-8">
+						<h2 class="text-lg font-semibold text-gray-900 mb-4">Your Bookings</h2>
+						<div class="text-center py-8 text-gray-500">
+							<svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+							<p>No bookings yet</p>
+							<a href="/rent-a-car" class="btn bg-orange-500 hover:bg-orange-600 text-white mt-4 inline-block">Rent a Car</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<Footer />
+</BaseLayout>
+
+<script>
+	import Alpine from "alpinejs";
+	import { supabase } from "@/lib/supabase";
+
+	document.addEventListener("alpine:init", () => {
+		Alpine.data("accountPage", () => ({
+			user: null,
+			loading: true,
+
+			async init() {
+				const { data: { session } } = await supabase.auth.getSession();
+				if (!session) {
+					this.loading = false;
+					return;
+				}
+				this.user = session.user;
+
+				supabase.auth.onAuthStateChange((_event, session) => {
+					this.user = session?.user || null;
+					this.loading = false;
+				});
+			},
+
+			getInitials() {
+				if (!this.user) return "U";
+				const meta = this.user.user_metadata;
+				const first = meta.first_name?.[0] || "";
+				const last = meta.last_name?.[0] || "";
+				return (first + last).toUpperCase() || this.user.email?.[0]?.toUpperCase() || "U";
+			},
+
+			getFullName() {
+				if (!this.user) return "User";
+				const meta = this.user.user_metadata;
+				const first = meta.first_name || "";
+				const last = meta.last_name || "";
+				return (first + " " + last).trim() || this.user.email || "User";
+			},
+		}));
+	});
+</script>
