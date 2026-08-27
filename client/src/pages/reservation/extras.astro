@@ -6,7 +6,6 @@ import ReservationSummary from "@/components/shared/ReservationSummary.astro";
 import { supabase } from "@/lib/supabase";
 import type { Car } from "@/types/car";
 import type { Extra } from "@/types/extra";
-import { CAR_OPTIONS } from "@/types/car";
 
 const carId = Astro.url.searchParams.get("car");
 const pickup = Astro.url.searchParams.get("pickup");
@@ -111,7 +110,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                 <div class="flex justify-end mt-10">
                     <a
                         id="continue-btn"
-                        href={`/reserva/datos?${baseParams}`}
+                        href={`/reservation/datos?${baseParams}`}
                         class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
                     >
                         Continue

@@ -51,7 +51,7 @@ Gestionarlo con `astro dev stop`, `astro dev status` y `astro dev logs`.
   - `rental-search.ts` — lógica de búsqueda de alquiler
   - `supabase.ts` — cliente de Supabase
 - `pages/` — rutas (file-based routing de Astro): `auth/`, `legal/`,
-  `mi-cuenta/`, `rent-a-car/`, `reserva/`
+  `mi-cuenta/`, `rent-a-car/`, `reservation/`
 - `styles/global.css` — estilos globales y configuración de tema Tailwind/daisyUI
 - `types/` — tipos TypeScript compartidos (`car.ts`)
 
