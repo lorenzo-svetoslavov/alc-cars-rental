@@ -6,9 +6,11 @@ interface Props {
     cars: CarSummary[];
     /** Whether the listing is already filtered by a date range */
     hasDates?: boolean;
+    pickupAt?: string;
+    returnAt?: string;
 }
 
-const { cars, hasDates = true } = Astro.props;
+const { cars, hasDates = true, pickupAt = "", returnAt = "" } = Astro.props;
 ---
 
 <div class="flex items-center justify-between mb-6">
@@ -26,7 +28,7 @@ const { cars, hasDates = true } = Astro.props;
     ) : (
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {cars.map((car) => (
-                <CarCard car={car} hasDates={hasDates} />
+                <CarCard car={car} hasDates={hasDates} pickupAt={pickupAt} returnAt={returnAt} />
             ))}
         </div>
     )

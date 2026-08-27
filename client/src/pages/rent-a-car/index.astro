@@ -29,7 +29,7 @@ const hasDates = Boolean(filters.pickupAt && filters.returnAt);
             </p>
         </header>
         <CarFilters filters={filters} />
-        <FleetGrid cars={cars} hasDates={hasDates} />
+        <FleetGrid cars={cars} hasDates={hasDates} pickupAt={filters.pickupAt} returnAt={filters.returnAt} />
     </main>
 
     {!hasDates && <CarDatesModal />}

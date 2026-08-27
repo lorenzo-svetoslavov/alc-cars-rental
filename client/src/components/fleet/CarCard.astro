@@ -5,9 +5,11 @@ interface Props {
     car: CarSummary;
     /** When false, selecting a car asks for the dates instead of opening it */
     hasDates?: boolean;
+    pickupAt?: string;
+    returnAt?: string;
 }
 
-const { car, hasDates = true } = Astro.props;
+const { car, hasDates = true, pickupAt = "", returnAt = "" } = Astro.props;
 
 const {
     id,
@@ -23,6 +25,8 @@ const {
     available,
     image_url,
 } = car;
+
+const extrasUrl = `/reserva/extras?car=${id}&pickup=${encodeURIComponent(pickupAt)}&return=${encodeURIComponent(returnAt)}`;
 
 const name = `${make} ${model} ${model_year}`;
 
@@ -89,7 +93,7 @@ const selectClass =
                     Not available
                 </button>
             ) : hasDates ? (
-                <a href={`/rent-a-car/${id}`} class={selectClass}>
+                <a href={extrasUrl} class={selectClass}>
                     Select
                 </a>
             ) : (
