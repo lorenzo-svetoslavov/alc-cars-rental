@@ -53,8 +53,8 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
             </p>
         </header>
 
-        <div class="flex flex-col md:flex-row gap-8 items-start">
-            <div class="flex-1 min-w-0">
+        <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch md:items-start">
+            <div class="flex-1 min-w-0 w-full">
                 <div
                     class="bg-white rounded-2xl border border-slate-100 p-6"
                     x-data="customerForm()"
@@ -89,6 +89,16 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                                 required
                                 class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
                                 placeholder="+34 600 000 000"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Email *</label>
+                            <input
+                                type="email"
+                                x-model="form.email"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="you@email.com"
                             />
                         </div>
                         <div>
@@ -157,13 +167,13 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
     import { supabase } from "@/lib/supabase";
 
     Alpine.data("customerForm", () => ({
-        user: null,
         saving: false,
         error: "",
         form: {
             first_name: "",
             last_name: "",
             phone: "",
+            email: "",
             id_number: "",
             drivers_license: "",
             address: "",
@@ -171,28 +181,10 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
 
         async init() {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            this.user = session.user;
-            await this.fetchCustomer();
-        },
-
-        async fetchCustomer() {
-            if (!this.user) return;
-
-            const { data } = await supabase
-                .from("customers")
-                .select("*")
-                .eq("id", this.user.id)
-                .single();
-
-            if (data) {
-                this.form.first_name = data.first_name || "";
-                this.form.last_name = data.last_name || "";
-                this.form.phone = data.phone || "";
-                this.form.id_number = data.id_number || "";
-                this.form.drivers_license = data.drivers_license || "";
-                this.form.address = data.address || "";
+            if (session) {
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = `/reservation/pago?${params.toString()}`;
+                return;
             }
         },
 
@@ -201,6 +193,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                 this.form.first_name.trim() &&
                 this.form.last_name.trim() &&
                 this.form.phone.trim() &&
+                this.form.email.trim() &&
                 this.form.id_number.trim() &&
                 this.form.drivers_license.trim() &&
                 this.form.address.trim()
@@ -213,37 +206,15 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
             this.saving = true;
             this.error = "";
 
-            if (this.user) {
-                const { error: dbError } = await supabase
-                    .from("customers")
-                    .update({
-                        first_name: this.form.first_name.trim(),
-                        last_name: this.form.last_name.trim(),
-                        phone: this.form.phone.trim(),
-                        id_number: this.form.id_number.trim().toUpperCase(),
-                        drivers_license: this.form.drivers_license.trim().toUpperCase(),
-                        address: this.form.address.trim(),
-                        updated_at: new Date().toISOString(),
-                    })
-                    .eq("id", this.user.id);
-
-                if (dbError) {
-                    this.error = dbError.message || "Failed to save details.";
-                    this.saving = false;
-                    return;
-                }
-
-                await supabase.auth.updateUser({
-                    data: {
-                        first_name: this.form.first_name.trim(),
-                        last_name: this.form.last_name.trim(),
-                        phone: this.form.phone.trim(),
-                        dni: this.form.id_number.trim().toUpperCase(),
-                        drivers_license: this.form.drivers_license.trim().toUpperCase(),
-                        address: this.form.address.trim(),
-                    },
-                });
-            }
+            const reservationData = {
+                guest_name: `${this.form.first_name.trim()} ${this.form.last_name.trim()}`,
+                guest_phone: this.form.phone.trim(),
+                guest_email: this.form.email.trim(),
+                guest_id_number: this.form.id_number.trim().toUpperCase(),
+                guest_drivers_license: this.form.drivers_license.trim().toUpperCase(),
+                guest_address: this.form.address.trim(),
+            };
+            localStorage.setItem("reservation_form", JSON.stringify(reservationData));
 
             const params = new URLSearchParams(window.location.search);
             window.location.href = `/reservation/pago?${params.toString()}`;
