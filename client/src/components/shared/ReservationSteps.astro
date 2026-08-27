@@ -1,0 +1,62 @@
+---
+interface Props {
+    currentStep: 1 | 2 | 3 | 4;
+    params?: string;
+}
+
+const { currentStep, params = "" } = Astro.props;
+
+const steps = [
+    { label: "Car", href: `/rent-a-car?${params}` },
+    { label: "Extras", href: `/reservation/extras?${params}` },
+    { label: "Details", href: `/reservation/datos?${params}` },
+    { label: "Payment", href: `/reservation/pago?${params}` },
+];
+---
+
+<ol class="flex items-center w-full mb-6 md:mb-8 px-2 md:px-0">
+    {steps.map((step, i) => {
+        const stepNum = i + 1;
+        const isCompleted = stepNum < currentStep;
+        const isCurrent = stepNum === currentStep;
+        const isLast = i === steps.length - 1;
+
+        return (
+            <li class:list={["flex items-center", !isLast && "flex-1"]}>
+                <div class="flex items-center gap-1.5 md:gap-2">
+                    {isCompleted ? (
+                        <a href={step.href} class="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-orange-500 text-white text-xs font-bold no-underline hover:bg-orange-600 transition-colors shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-3.5 h-3.5 md:w-4 md:h-4" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0" clip-rule="evenodd"/></svg>
+                        </a>
+                    ) : isCurrent ? (
+                        <span class="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-orange-500 text-white text-xs font-bold shrink-0">
+                            {stepNum}
+                        </span>
+                    ) : (
+                        <span class="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-200 text-slate-500 text-xs font-bold shrink-0">
+                            {stepNum}
+                        </span>
+                    )}
+                    <span class:list={[
+                        "text-xs md:text-sm font-medium whitespace-nowrap hidden sm:inline",
+                        isCompleted && "text-orange-600",
+                        isCurrent && "text-slate-800 font-semibold",
+                        !isCompleted && !isCurrent && "text-slate-400",
+                    ]}>
+                        {isCompleted ? (
+                            <a href={step.href} class="no-underline text-orange-600 hover:text-orange-700 transition-colors">{step.label}</a>
+                        ) : (
+                            step.label
+                        )}
+                    </span>
+                </div>
+                {!isLast && (
+                    <div class:list={[
+                        "flex-1 h-0.5 mx-1.5 md:mx-3 rounded-full",
+                        stepNum < currentStep ? "bg-orange-400" : "bg-slate-200",
+                    ]} />
+                )}
+            </li>
+        );
+    })}
+</ol>
