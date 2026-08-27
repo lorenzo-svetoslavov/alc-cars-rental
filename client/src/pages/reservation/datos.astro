@@ -183,7 +183,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 const params = new URLSearchParams(window.location.search);
-                window.location.href = `/reservation/pago?${params.toString()}`;
+                window.location.href = `/reservation/confirmacion?${params.toString()}`;
                 return;
             }
         },
@@ -217,7 +217,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
             localStorage.setItem("reservation_form", JSON.stringify(reservationData));
 
             const params = new URLSearchParams(window.location.search);
-            window.location.href = `/reservation/pago?${params.toString()}`;
+            window.location.href = `/reservation/confirmacion?${params.toString()}`;
         },
     }));
 </script>
