@@ -1,0 +1,35 @@
+---
+---
+
+<div class="bg-white rounded-lg border border-gray-200 p-6">
+	<div class="flex items-center gap-4 mb-6">
+		<div
+			class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-semibold text-lg"
+			x-text="getInitials()"
+		>
+		</div>
+		<div>
+			<h1 class="text-lg font-semibold text-gray-900" x-text="getFullName()"></h1>
+			<p class="text-sm text-gray-500" x-text="user.email"></p>
+		</div>
+	</div>
+
+	<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+		<div>
+			<p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Phone</p>
+			<p class="text-sm text-gray-700" x-text="user.user_metadata.phone || '—'"></p>
+		</div>
+		<div>
+			<p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">DNI / NIE</p>
+			<p class="text-sm text-gray-700" x-text="user.user_metadata.dni || '—'"></p>
+		</div>
+		<div>
+			<p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Driver's License</p>
+			<p class="text-sm text-gray-700" x-text="user.user_metadata.drivers_license || '—'"></p>
+		</div>
+		<div>
+			<p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Address</p>
+			<p class="text-sm text-gray-700" x-text="user.user_metadata.address || '—'"></p>
+		</div>
+	</div>
+</div>
