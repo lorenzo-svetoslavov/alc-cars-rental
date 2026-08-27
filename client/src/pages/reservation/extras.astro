@@ -11,9 +11,11 @@ import type { Extra } from "@/types/extra";
 const carId = Astro.url.searchParams.get("car");
 const pickup = Astro.url.searchParams.get("pickup");
 const returnDate = Astro.url.searchParams.get("return");
+const extrasParam = Astro.url.searchParams.get("extras");
 
 let car: Car | null = null;
 let extras: Extra[] = [];
+let selectedExtras: { id: string; name: string; price: number; pricing: string }[] = [];
 
 if (carId) {
     const { data } = await supabase
@@ -32,6 +34,11 @@ const { data: extrasData } = await supabase
     .order("price");
 
 extras = extrasData ?? [];
+
+if (extrasParam) {
+    const ids = extrasParam.split(",");
+    selectedExtras = extras.filter((e) => ids.includes(e.id));
+}
 
 const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&return=${encodeURIComponent(returnDate ?? "")}`;
 ---
@@ -133,7 +140,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                 </div>
             </div>
 
-            <ReservationSummary car={car} pickup={pickup} returnDate={returnDate} />
+            <ReservationSummary car={car} pickup={pickup} returnDate={returnDate} extras={selectedExtras} />
         </div>
 
         <script>
@@ -178,9 +185,35 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                 totalEl.textContent = `${(carTotal + extrasTotal).toFixed(2)} €`;
             }
 
+            function initExtras() {
+                const params = new URLSearchParams(window.location.search);
+                const savedExtras = params.get("extras");
+
+                if (savedExtras) {
+                    const ids = savedExtras.split(",");
+                    ids.forEach((id) => {
+                        const checkbox = document.querySelector<HTMLInputElement>(
+                            `input[name="extras"][value="${id}"]`
+                        );
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+
+                const btn = document.getElementById("continue-btn") as HTMLAnchorElement;
+                if (btn && savedExtras) {
+                    const url = new URL(btn.href);
+                    url.searchParams.set("extras", savedExtras);
+                    btn.href = url.toString();
+                }
+
+                updateSummary();
+            }
+
             document.querySelectorAll('input[name="extras"]').forEach((input) => {
                 input.addEventListener("change", updateSummary);
             });
+
+            initExtras();
         </script>
     </main>
 

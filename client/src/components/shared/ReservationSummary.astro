@@ -1,18 +1,33 @@
 ---
 import type { Car } from "@/types/car";
 
+interface Extra {
+    id: string;
+    name: string;
+    price: number;
+    pricing: string;
+}
+
 interface Props {
     car: Car | null;
     pickup: string | null;
     returnDate: string | null;
+    extras?: Extra[];
 }
 
-const { car, pickup, returnDate } = Astro.props;
+const { car, pickup, returnDate, extras = [] } = Astro.props;
 
 const pickupMs = pickup ? new Date(pickup).getTime() : 0;
 const returnMs = returnDate ? new Date(returnDate).getTime() : 0;
 const days = Math.max(1, Math.ceil((returnMs - pickupMs) / (1000 * 60 * 60 * 24)));
 const carTotal = car ? car.daily_rate * days : 0;
+
+let extrasTotal = 0;
+extras.forEach((extra) => {
+    extrasTotal += extra.pricing === "per_day" ? extra.price * days : extra.price;
+});
+
+const total = carTotal + extrasTotal;
 ---
 
 <aside class="w-full md:w-80 shrink-0 order-first md:order-last">
@@ -21,7 +36,7 @@ const carTotal = car ? car.daily_rate * days : 0;
 
         {car && (
             <div class="mb-3">
-                <p class="font-semibold text-sm text-slate-800">{car.make} {car.model} {car.model_year}</p>
+                <p class="font-semibold text-sm text-slate-800">{car.make} {car.model} {car.model_year} {car.color}</p>
                 <p class="text-sm text-slate-500 mt-1">
                     <span id="summary-car-rate">{car.daily_rate} €</span>
                     <span class="text-xs text-slate-400"> × </span>
@@ -32,13 +47,20 @@ const carTotal = car ? car.daily_rate * days : 0;
             </div>
         )}
 
-        <div id="summary-extras" class="text-sm text-slate-600 space-y-1"></div>
+        <div id="summary-extras" class="text-sm text-slate-600 space-y-1">
+            {extras.map((extra) => (
+                <div class="flex justify-between">
+                    <span class="text-slate-600">{extra.name}</span>
+                    <span class="font-medium text-slate-700">{(extra.pricing === "per_day" ? extra.price * days : extra.price).toFixed(2)} €</span>
+                </div>
+            ))}
+        </div>
 
         <hr class="border-slate-200 my-4" />
 
         <div class="flex justify-between items-center">
             <span class="font-bold text-sm text-slate-800">Total</span>
-            <span id="summary-total" class="font-bold text-orange-500 text-lg">{carTotal.toFixed(2)} €</span>
+            <span id="summary-total" class="font-bold text-orange-500 text-lg">{total.toFixed(2)} €</span>
         </div>
     </div>
 </aside>

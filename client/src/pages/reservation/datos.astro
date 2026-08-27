@@ -1,0 +1,252 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+import ReservationSteps from "@/components/shared/ReservationSteps.astro";
+import ReservationSummary from "@/components/shared/ReservationSummary.astro";
+import { supabase } from "@/lib/supabase";
+import type { Car } from "@/types/car";
+
+const carId = Astro.url.searchParams.get("car");
+const pickup = Astro.url.searchParams.get("pickup");
+const returnDate = Astro.url.searchParams.get("return");
+const extrasParam = Astro.url.searchParams.get("extras");
+
+let car: Car | null = null;
+let selectedExtras: { id: string; name: string; price: number; pricing: string }[] = [];
+
+if (carId) {
+    const { data } = await supabase
+        .from("cars")
+        .select("*")
+        .eq("id", carId)
+        .single();
+
+    car = data;
+}
+
+if (extrasParam) {
+    const ids = extrasParam.split(",");
+    const { data } = await supabase
+        .from("extras")
+        .select("id, name, price, pricing")
+        .in("id", ids);
+
+    selectedExtras = data ?? [];
+}
+
+const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&return=${encodeURIComponent(returnDate ?? "")}${extrasParam ? `&extras=${extrasParam}` : ""}`;
+---
+
+<BaseLayout title="Details · ALC Cars">
+    <Header />
+
+    <main class="max-w-6xl mx-auto px-4 py-16 flex-1 w-full">
+        <ReservationSteps currentStep={3} params={baseParams} />
+
+        <header class="mb-10">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800">
+                Personal details
+            </h1>
+            <p class="text-slate-400 mt-1 text-sm">
+                Enter your information to complete the reservation
+            </p>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8 items-start">
+            <div class="flex-1 min-w-0">
+                <div
+                    class="bg-white rounded-2xl border border-slate-100 p-6"
+                    x-data="customerForm()"
+                    x-init="init()"
+                >
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">First Name *</label>
+                            <input
+                                type="text"
+                                x-model="form.first_name"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="First name"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Last Name *</label>
+                            <input
+                                type="text"
+                                x-model="form.last_name"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="Last name"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Phone *</label>
+                            <input
+                                type="tel"
+                                x-model="form.phone"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="+34 600 000 000"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">DNI / NIE *</label>
+                            <input
+                                type="text"
+                                x-model="form.id_number"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="12345678A"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Driver's License *</label>
+                            <input
+                                type="text"
+                                x-model="form.drivers_license"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="License number"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Address *</label>
+                            <input
+                                type="text"
+                                x-model="form.address"
+                                required
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
+                                placeholder="Your address"
+                            />
+                        </div>
+                    </div>
+
+                    <p x-show="error" x-text="error" x-cloak class="text-red-500 text-sm mt-4"></p>
+
+                    <div class="flex justify-between mt-10">
+                        <a
+                            href={`/reservation/extras?${baseParams}`}
+                            class="btn bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-none"
+                        >
+                            ← Back
+                        </a>
+                        <button
+                            type="button"
+                            class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
+                            :disabled="saving || !isValid()"
+                            @click="saveAndContinue()"
+                        >
+                            <template x-if="!saving"><span>Continue →</span></template>
+                            <template x-if="saving"><span>Saving...</span></template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <ReservationSummary car={car} pickup={pickup} returnDate={returnDate} extras={selectedExtras} />
+        </div>
+    </main>
+
+    <Footer />
+</BaseLayout>
+
+<script>
+    import Alpine from "alpinejs";
+    import { supabase } from "@/lib/supabase";
+
+    Alpine.data("customerForm", () => ({
+        user: null,
+        saving: false,
+        error: "",
+        form: {
+            first_name: "",
+            last_name: "",
+            phone: "",
+            id_number: "",
+            drivers_license: "",
+            address: "",
+        },
+
+        async init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            this.user = session.user;
+            await this.fetchCustomer();
+        },
+
+        async fetchCustomer() {
+            if (!this.user) return;
+
+            const { data } = await supabase
+                .from("customers")
+                .select("*")
+                .eq("id", this.user.id)
+                .single();
+
+            if (data) {
+                this.form.first_name = data.first_name || "";
+                this.form.last_name = data.last_name || "";
+                this.form.phone = data.phone || "";
+                this.form.id_number = data.id_number || "";
+                this.form.drivers_license = data.drivers_license || "";
+                this.form.address = data.address || "";
+            }
+        },
+
+        isValid() {
+            return (
+                this.form.first_name.trim() &&
+                this.form.last_name.trim() &&
+                this.form.phone.trim() &&
+                this.form.id_number.trim() &&
+                this.form.drivers_license.trim() &&
+                this.form.address.trim()
+            );
+        },
+
+        async saveAndContinue() {
+            if (!this.isValid()) return;
+
+            this.saving = true;
+            this.error = "";
+
+            if (this.user) {
+                const { error: dbError } = await supabase
+                    .from("customers")
+                    .update({
+                        first_name: this.form.first_name.trim(),
+                        last_name: this.form.last_name.trim(),
+                        phone: this.form.phone.trim(),
+                        id_number: this.form.id_number.trim().toUpperCase(),
+                        drivers_license: this.form.drivers_license.trim().toUpperCase(),
+                        address: this.form.address.trim(),
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", this.user.id);
+
+                if (dbError) {
+                    this.error = dbError.message || "Failed to save details.";
+                    this.saving = false;
+                    return;
+                }
+
+                await supabase.auth.updateUser({
+                    data: {
+                        first_name: this.form.first_name.trim(),
+                        last_name: this.form.last_name.trim(),
+                        phone: this.form.phone.trim(),
+                        dni: this.form.id_number.trim().toUpperCase(),
+                        drivers_license: this.form.drivers_license.trim().toUpperCase(),
+                        address: this.form.address.trim(),
+                    },
+                });
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            window.location.href = `/reservation/pago?${params.toString()}`;
+        },
+    }));
+</script>
