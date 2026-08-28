@@ -80,11 +80,6 @@ const total = carTotal + extrasTotal;
             <!-- Review state: show summary + confirm button -->
             <div x-show="!loading && !error && !booking && form" x-cloak>
                 <header class="text-center mb-10">
-                    <div class="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
                     <h1 class="text-2xl md:text-3xl font-bold text-slate-800">
                         Review your reservation
                     </h1>
@@ -106,7 +101,7 @@ const total = carTotal + extrasTotal;
                                 <div>
                                     <p class="font-semibold text-slate-800">{car?.make} {car?.model} {car?.model_year}</p>
                                     <p class="text-sm text-slate-500">{car?.color} · {car?.transmission === "automatic" ? "Automatic" : "Manual"} · {car?.fuel}</p>
-                                    <p class="text-sm text-slate-400 mt-1">{car?.daily_rate} €/day × {days} day{days !== 1 ? "s" : ""} = <span class="font-semibold text-slate-700">{carTotal.toFixed(2)} €</span></p>
+                                    <p class="text-sm text-slate-400 mt-1">{car?.daily_rate} €/day</p>
                                 </div>
                             </div>
                         </div>
@@ -337,6 +332,38 @@ const total = carTotal + extrasTotal;
                     return;
                 }
 
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (session) {
+                    const { data: customer } = await supabase
+                        .from("customers")
+                        .select("first_name, last_name, phone, id_number, drivers_license, address")
+                        .eq("id", session.user.id)
+                        .single();
+
+                    if (customer) {
+                        this.form = {
+                            guest_name: `${customer.first_name || ""} ${customer.last_name || ""}`.trim(),
+                            guest_email: session.user.email || "",
+                            guest_phone: customer.phone || "",
+                            guest_id_number: customer.id_number || "",
+                            guest_drivers_license: customer.drivers_license || "",
+                            guest_address: customer.address || "",
+                        };
+                    } else {
+                        this.form = {
+                            guest_name: "",
+                            guest_email: session.user.email || "",
+                            guest_phone: "",
+                            guest_id_number: "",
+                            guest_drivers_license: "",
+                            guest_address: "",
+                        };
+                    }
+                    this.loading = false;
+                    return;
+                }
+
                 const formRaw = localStorage.getItem("reservation_form");
                 if (!formRaw) {
                     this.error = "No personal details found. Please go back and fill in your information.";
@@ -364,9 +391,34 @@ const total = carTotal + extrasTotal;
                 const returnDate = params.get("return");
                 const extrasParam = params.get("extras");
 
-                const pickupMs = new Date(pickup).getTime();
-                const returnMs = new Date(returnDate).getTime();
-                const days = Math.max(1, Math.ceil((returnMs - pickupMs) / (1000 * 60 * 60 * 24)));
+                if (!carId || !pickup || !returnDate) {
+                    this.error = "Missing reservation data. Please start over.";
+                    this.submitting = false;
+                    return;
+                }
+
+                if (!this.form?.guest_name?.trim()) {
+                    this.error = "Please provide your name.";
+                    this.submitting = false;
+                    return;
+                }
+
+                const pickupDate = new Date(pickup);
+                const returnDateObj = new Date(returnDate);
+
+                if (isNaN(pickupDate.getTime()) || isNaN(returnDateObj.getTime())) {
+                    this.error = "Invalid dates. Please go back and select valid dates.";
+                    this.submitting = false;
+                    return;
+                }
+
+                if (returnDateObj <= pickupDate) {
+                    this.error = "Return date must be after pick-up date.";
+                    this.submitting = false;
+                    return;
+                }
+
+                const days = Math.max(1, Math.ceil((returnDateObj.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24)));
 
                 const { data: car } = await supabase
                     .from("cars")
@@ -385,39 +437,52 @@ const total = carTotal + extrasTotal;
                 let extrasTotal = 0;
                 let extrasData = [];
                 if (extrasParam) {
-                    const ids = extrasParam.split(",");
-                    const { data } = await supabase
-                        .from("extras")
-                        .select("id, price, pricing")
-                        .in("id", ids);
-                    extrasData = data ?? [];
-                    extrasData.forEach((e) => {
-                        extrasTotal += e.pricing === "per_day" ? e.price * days : e.price;
-                    });
+                    const ids = extrasParam.split(",").filter(Boolean);
+                    if (ids.length > 0) {
+                        const { data } = await supabase
+                            .from("extras")
+                            .select("id, price, pricing")
+                            .in("id", ids);
+                        extrasData = data ?? [];
+                        extrasData.forEach((e) => {
+                            extrasTotal += e.pricing === "per_day" ? e.price * days : e.price;
+                        });
+                    }
                 }
 
                 const total = carTotal + extrasTotal;
 
+                const pickupISO = pickupDate.toISOString();
+                const returnISO = returnDateObj.toISOString();
+
+                const { data: { session } } = await supabase.auth.getSession();
+
+                const bookingPayload: Record<string, unknown> = {
+                    car_id: carId,
+                    pickup_at: pickupISO,
+                    dropoff_at: returnISO,
+                    price: total,
+                    guest_name: this.form.guest_name.trim(),
+                    guest_email: this.form.guest_email || "",
+                    guest_phone: this.form.guest_phone || "",
+                    guest_id_number: this.form.guest_id_number || "",
+                    guest_drivers_license: this.form.guest_drivers_license || "",
+                    guest_address: this.form.guest_address || "",
+                };
+
+                if (session) {
+                    bookingPayload.customer_id = session.user.id;
+                }
+
                 const { data: booking, error: insertError } = await supabase
                     .from("bookings")
-                    .insert({
-                        car_id: carId,
-                        pickup_at: pickup,
-                        dropoff_at: returnDate,
-                        price: total,
-                        guest_name: this.form.guest_name,
-                        guest_email: this.form.guest_email,
-                        guest_phone: this.form.guest_phone,
-                        guest_id_number: this.form.guest_id_number,
-                        guest_drivers_license: this.form.guest_drivers_license,
-                        guest_address: this.form.guest_address,
-                    })
+                    .insert(bookingPayload)
                     .select()
                     .single();
 
                 if (insertError) {
                     console.error("Booking insert error:", insertError);
-                    this.error = "Failed to create reservation. Please try again.";
+                    this.error = `Failed to create reservation: ${insertError.message}`;
                     this.submitting = false;
                     return;
                 }

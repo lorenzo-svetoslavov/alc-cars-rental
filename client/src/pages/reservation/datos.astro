@@ -56,10 +56,21 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
         <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch md:items-start">
             <div class="flex-1 min-w-0 w-full">
                 <div
-                    class="bg-white rounded-2xl border border-slate-100 p-6"
                     x-data="customerForm()"
                     x-init="init()"
                 >
+                    <div x-show="!ready" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 p-6">
+                        <svg class="animate-spin h-8 w-8 text-orange-500 mb-4" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+                            <path fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12z" class="opacity-75"/>
+                        </svg>
+                        <p class="text-slate-400 text-sm">Loading...</p>
+                    </div>
+                    <div
+                        x-show="ready"
+                        x-cloak
+                        class="bg-white rounded-2xl border border-slate-100 p-6"
+                    >
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                         <div>
                             <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">First Name *</label>
@@ -152,6 +163,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                             <template x-if="saving"><span>Saving...</span></template>
                         </button>
                     </div>
+                    </div>
                 </div>
             </div>
 
@@ -167,6 +179,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
     import { supabase } from "@/lib/supabase";
 
     Alpine.data("customerForm", () => ({
+        ready: false,
         saving: false,
         error: "",
         form: {
@@ -186,6 +199,7 @@ const baseParams = `car=${carId}&pickup=${encodeURIComponent(pickup ?? "")}&retu
                 window.location.href = `/reservation/confirmacion?${params.toString()}`;
                 return;
             }
+            this.ready = true;
         },
 
         isValid() {
