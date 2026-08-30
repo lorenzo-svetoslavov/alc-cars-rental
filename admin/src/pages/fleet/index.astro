@@ -1,0 +1,41 @@
+---
+import CarCard from "@/components/cars/CarCard.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getCars } from "@/lib/cars";
+
+let cars: Awaited<ReturnType<typeof getCars>> = [];
+let error: string | null = null;
+
+try {
+    cars = await getCars();
+} catch (e) {
+    error = e instanceof Error ? e.message : "Error inesperado";
+}
+---
+
+<BaseLayout title="Flota · ALC Cars">
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold">Flota</h1>
+            <p class="text-slate-500 mt-1">
+                {error
+                    ? "No se pudo cargar la flota"
+                    : `${cars.length} vehículo${cars.length === 1 ? "" : "s"}`}
+            </p>
+        </header>
+
+        {error ? (
+            <div class="alert alert-error" role="alert">
+                <span>{error}</span>
+            </div>
+        ) : cars.length === 0 ? (
+            <p class="text-slate-500 text-center py-12">
+                No hay vehículos en la flota.
+            </p>
+        ) : (
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {cars.map((car) => <CarCard car={car} />)}
+            </div>
+        )}
+    </div>
+</BaseLayout>
