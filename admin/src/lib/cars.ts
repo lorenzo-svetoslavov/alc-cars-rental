@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Car } from "@/types/car";
 
 export type CarUpdate = Partial<
@@ -20,7 +21,7 @@ export async function getCarById(id: string): Promise<Car | null> {
 }
 
 export async function updateCar(id: string, updates: CarUpdate): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from("cars")
         .update(updates)
         .eq("id", id);
