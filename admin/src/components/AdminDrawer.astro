@@ -1,0 +1,121 @@
+---
+const pathname = Astro.url.pathname;
+const isActive = (path: string) =>
+    path === "/" ? pathname === "/" : pathname.startsWith(path);
+---
+
+<div class="drawer lg:drawer-open">
+    <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
+
+    <div class="drawer-content flex flex-col h-screen">
+        <!-- Navbar -->
+        <div class="navbar bg-base-100 border-b border-base-200 lg:hidden">
+            <div class="flex-none">
+                <label
+                    for="admin-drawer"
+                    aria-label="Abrir menú"
+                    class="btn btn-square btn-ghost drawer-button"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-6"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                        />
+                    </svg>
+                </label>
+            </div>
+            <div class="flex-1">
+                <a href="/" class="text-lg font-bold">ALC Cars</a>
+            </div>
+        </div>
+
+        <!-- Page content -->
+        <slot />
+    </div>
+
+    <div class="drawer-side z-40">
+        <label
+            for="admin-drawer"
+            aria-label="Cerrar menú"
+            class="drawer-overlay"
+        ></label>
+
+        <aside class="bg-base-100 min-h-full w-72 border-r border-base-200 flex flex-col">
+            <!-- Logo -->
+            <div class="p-5 pb-4 border-b border-base-200">
+                <a href="/" class="text-xl font-bold">ALC Cars</a>
+                <p class="text-xs text-slate-500 mt-1">Panel de administración</p>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex flex-col gap-1 p-4 flex-1">
+                <a
+                    href="/"
+                    class:list={[
+                        "flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors",
+                        isActive("/")
+                            ? "bg-base-300 text-slate-900"
+                            : "text-slate-600 hover:bg-base-200 hover:text-slate-900",
+                    ]}
+                    onclick="document.getElementById('admin-drawer').checked=false"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-6 shrink-0"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                        />
+                    </svg>
+                    Panel
+                </a>
+
+                <a
+                    href="/fleet"
+                    class:list={[
+                        "flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors",
+                        isActive("/fleet")
+                            ? "bg-base-300 text-slate-900"
+                            : "text-slate-600 hover:bg-base-200 hover:text-slate-900",
+                    ]}
+                    onclick="document.getElementById('admin-drawer').checked=false"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-6 shrink-0"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
+                        />
+                    </svg>
+                    Flota
+                </a>
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-base-200 text-xs text-slate-500">
+                ALC Cars © {new Date().getFullYear()}
+            </div>
+        </aside>
+    </div>
+</div>
