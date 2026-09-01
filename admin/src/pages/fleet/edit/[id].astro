@@ -1,0 +1,184 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getCarById, updateCar } from "@/lib/cars";
+import { CAR_OPTIONS, type Car } from "@/types/car";
+
+const id = Astro.params.id;
+
+let car: Car | null = null;
+let loadError: string | null = null;
+let saveError: string | null = null;
+
+try {
+    car = await getCarById(id);
+} catch (e) {
+    loadError = e instanceof Error ? e.message : "Error inesperado";
+}
+
+if (Astro.request.method === "POST" && car) {
+    const form = await Astro.request.formData();
+
+    const make = (form.get("make") ?? "").toString().trim();
+    const model = (form.get("model") ?? "").toString().trim();
+
+    if (!make || !model) {
+        saveError = "Fabricante y modelo son obligatorios.";
+    } else {
+        try {
+            await updateCar(car.id, {
+                make,
+                model,
+                plate_number: (form.get("plate_number") ?? "").toString().trim(),
+                model_year: Number(form.get("model_year")),
+                color: (form.get("color") ?? "").toString().trim() || null,
+                transmission: (form.get("transmission") ?? "manual").toString(),
+                fuel: (form.get("fuel") ?? "gasoline").toString(),
+                category: (form.get("category") ?? "compact").toString(),
+                mileage: Number(form.get("mileage")),
+                seats: Number(form.get("seats")),
+                doors: Number(form.get("doors")),
+                air_conditioning: form.get("air_conditioning") === "on",
+                daily_rate: Number(form.get("daily_rate")),
+                available: form.get("available") === "on",
+                image_url: (form.get("image_url") ?? "").toString().trim(),
+            });
+            return Astro.redirect("/fleet");
+        } catch (e) {
+            saveError = e instanceof Error ? e.message : "Error inesperado";
+        }
+    }
+}
+---
+
+<BaseLayout title="Editar vehículo · ALC Cars">
+    <div class="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Editar vehículo</h1>
+                <p class="text-slate-500 mt-1">
+                    {car ? `${car.make} ${car.model} ${car.model_year}` : ""}
+                </p>
+            </div>
+            <a href="/fleet" class="btn btn-ghost btn-sm">Volver</a>
+        </header>
+
+        {loadError || !car ? (
+            <div class="alert alert-error" role="alert">
+                <span>{loadError ?? "Vehículo no encontrado."}</span>
+            </div>
+        ) : saveError ? (
+            <div class="alert alert-error mb-6" role="alert">
+                <span>{saveError}</span>
+            </div>
+        ) : (
+            <form method="post" class="card bg-base-100 border border-base-300 shadow-sm">
+                <div class="card-body gap-4">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <label class="form-control">
+                            <span class="label">Fabricante *</span>
+                            <input class="input input-bordered" type="text" name="make"
+                                value={car.make} required />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Modelo *</span>
+                            <input class="input input-bordered" type="text" name="model"
+                                value={car.model} required />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Matrícula</span>
+                            <input class="input input-bordered" type="text" name="plate_number"
+                                value={car.plate_number} />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Año</span>
+                            <input class="input input-bordered" type="number" name="model_year"
+                                value={car.model_year} />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Color</span>
+                            <input class="input input-bordered" type="text" name="color"
+                                value={car.color ?? ""} />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Categoría</span>
+                            <select class="select select-bordered" name="category">
+                                {Object.entries(CAR_OPTIONS.category).map(([value, label]) => (
+                                    <option value={value} selected={car.category === value}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Transmisión</span>
+                            <select class="select select-bordered" name="transmission">
+                                {Object.entries(CAR_OPTIONS.transmission).map(([value, label]) => (
+                                    <option value={value} selected={car.transmission === value}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Combustible</span>
+                            <select class="select select-bordered" name="fuel">
+                                {Object.entries(CAR_OPTIONS.fuel).map(([value, label]) => (
+                                    <option value={value} selected={car.fuel === value}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label class="form-control">
+                            <span class="label">Kilometraje</span>
+                            <input class="input input-bordered" type="number" name="mileage"
+                                value={car.mileage} />
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="form-control">
+                                <span class="label">Plazas</span>
+                                <input class="input input-bordered" type="number" name="seats"
+                                    value={car.seats} />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">Puertas</span>
+                                <input class="input input-bordered" type="number" name="doors"
+                                    value={car.doors} />
+                            </label>
+                        </div>
+                        <label class="form-control">
+                            <span class="label">Tarifa diaria (€)</span>
+                            <input class="input input-bordered" type="number" step="0.01"
+                                name="daily_rate" value={car.daily_rate} />
+                        </label>
+                        <label class="form-control">
+                            <span class="label">URL de imagen</span>
+                            <input class="input input-bordered" type="url" name="image_url"
+                                value={car.image_url} />
+                        </label>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="flex flex-wrap gap-6">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input class="toggle toggle-primary" type="checkbox"
+                                name="available" checked={car.available} />
+                            <span class="label-text">Disponible</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input class="toggle toggle-primary" type="checkbox"
+                                name="air_conditioning" checked={car.air_conditioning} />
+                            <span class="label-text">Aire acondicionado</span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-2">
+                        <a href="/fleet" class="btn btn-ghost">Cancelar</a>
+                        <button type="submit" class="btn btn-warning">Guardar cambios</button>
+                    </div>
+                </div>
+            </form>
+        )}
+    </div>
+</BaseLayout>
