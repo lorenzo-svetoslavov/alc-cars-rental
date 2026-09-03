@@ -8,35 +8,66 @@ interface Props {
 
 const { idPrefix = "" } = Astro.props;
 
-const pickupId = `${idPrefix}pickup-date`;
-const returnId = `${idPrefix}return-date`;
+const pickupDateId = `${idPrefix}pickup-date`;
+const pickupTimeId = `${idPrefix}pickup-time`;
+const returnDateId = `${idPrefix}return-date`;
+const returnTimeId = `${idPrefix}return-time`;
 ---
 
+<input type="hidden" name="pickup" :value="pickupAt" />
+<input type="hidden" name="return" :value="returnAt" />
+
 <div class="flex flex-col text-left">
-    <label class="text-sm font-bold mb-1" for={pickupId}>Pickup date &amp; time</label>
-    <input
-        id={pickupId}
-        name="pickup"
-        type="text"
-        placeholder="Select date & time"
-        x-ref="pickupInput"
-        x-model="pickupAt"
-        class="input input-bordered w-full"
-    />
+    <label class="text-sm font-bold mb-1">Pickup date &amp; time</label>
+    <div class="flex gap-2">
+        <div class="flex flex-col flex-1">
+            <label class="text-xs text-gray-500 mb-1" for={pickupDateId}>Date</label>
+            <input
+                id={pickupDateId}
+                type="text"
+                placeholder="Select date"
+                x-ref="pickupDateInput"
+                class="input input-bordered w-full"
+            />
+        </div>
+        <div class="flex flex-col flex-1">
+            <label class="text-xs text-gray-500 mb-1" for={pickupTimeId}>Hour</label>
+            <input
+                id={pickupTimeId}
+                type="text"
+                placeholder="Select hour"
+                x-ref="pickupTimeInput"
+                class="input input-bordered w-full"
+            />
+        </div>
+    </div>
     <p x-show="pickupError" x-text="pickupError" x-cloak class="text-sm text-red-600 mt-1"></p>
 </div>
 
 <div class="flex flex-col text-left">
-    <label class="text-sm font-bold mb-1" for={returnId}>Return date &amp; time</label>
-    <input
-        id={returnId}
-        name="return"
-        type="text"
-        placeholder="Select date & time"
-        x-ref="returnInput"
-        x-model="returnAt"
-        class="input input-bordered w-full"
-    />
+    <label class="text-sm font-bold mb-1">Return date &amp; time</label>
+    <div class="flex gap-2">
+        <div class="flex flex-col flex-1">
+            <label class="text-xs text-gray-500 mb-1" for={returnDateId}>Date</label>
+            <input
+                id={returnDateId}
+                type="text"
+                placeholder="Select date"
+                x-ref="returnDateInput"
+                class="input input-bordered w-full"
+            />
+        </div>
+        <div class="flex flex-col flex-1">
+            <label class="text-xs text-gray-500 mb-1" for={returnTimeId}>Hour</label>
+            <input
+                id={returnTimeId}
+                type="text"
+                placeholder="Select hour"
+                x-ref="returnTimeInput"
+                class="input input-bordered w-full"
+            />
+        </div>
+    </div>
     <p x-show="returnError" x-text="returnError" x-cloak class="text-sm text-red-600 mt-1"></p>
 </div>
 
@@ -46,69 +77,119 @@ const returnId = `${idPrefix}return-date`;
     import type { Instance } from "flatpickr/dist/types/instance";
     import type { RentalSearchConfig } from "@/lib/rental-search";
 
-    // Blocked holidays (month is 0-11, any year)
     const isBlockedDate = (date: Date) =>
         (date.getMonth() === 11 && date.getDate() === 25) ||
         (date.getMonth() === 0 && date.getDate() === 1);
 
-    const dateTimeOptions = {
-        enableTime: true,
-        time_24hr: true,
-        dateFormat: "Y-m-d H:i",
-        minuteIncrement: 5,
-        minTime: "06:00",
-        maxTime: "23:55",
-        defaultHour: 10,
+    const dateOptions = {
+        enableTime: false,
+        dateFormat: "Y-m-d",
         minDate: "today",
         disable: [isBlockedDate],
     };
 
+    const timeOptions = {
+        enableTime: true,
+        noCalendar: true,
+        time_24hr: true,
+        dateFormat: "H:i",
+        minuteIncrement: 5,
+        minTime: "06:00",
+        maxTime: "23:55",
+        defaultHour: 10,
+    };
+
+    function combineDateTime(date: string, time: string): string {
+        if (!date) return "";
+        if (!time) return date;
+        return `${date} ${time}`;
+    }
+
+    function splitDateTime(value: string): { date: string; time: string } {
+        if (!value) return { date: "", time: "" };
+        const parts = value.split(" ");
+        return { date: parts[0] || "", time: parts[1] || "" };
+    }
+
     document.addEventListener("alpine:init", () => {
-        // Always instantiated through rentalSearchData(), so the config
-        // arrives with every default already resolved
         Alpine.data("rentalSearch", (config: RentalSearchConfig) => ({
             ...config,
             ageConfirmed: false,
             submitted: false,
-            returnPicker: null as Instance | null,
+            returnDatePicker: null as Instance | null,
+            returnTimePicker: null as Instance | null,
 
             init() {
-                this.returnPicker = flatpickr(this.$refs.returnInput, {
-                    ...dateTimeOptions,
-                    defaultDate: this.returnAt || undefined,
+                const pickupInitial = splitDateTime(this.pickupAt);
+                const returnInitial = splitDateTime(this.returnAt);
+
+                this.returnTimePicker = flatpickr(this.$refs.returnTimeInput, {
+                    ...timeOptions,
+                    defaultDate: returnInitial.time || undefined,
                     onChange: (_dates, value) => {
-                        this.returnAt = value;
-                        this.syncMinReturnTime();
+                        this.returnAt = combineDateTime(
+                            splitDateTime(this.returnAt).date,
+                            value,
+                        );
+                        this.syncReturnPickerConstraints();
                     },
                 });
 
-                flatpickr(this.$refs.pickupInput, {
-                    ...dateTimeOptions,
-                    defaultDate: this.pickupAt || undefined,
+                this.returnDatePicker = flatpickr(this.$refs.returnDateInput, {
+                    ...dateOptions,
+                    defaultDate: returnInitial.date || undefined,
                     onChange: (dates, value) => {
-                        this.pickupAt = value;
-                        // Return date can't be before the pickup date
-                        this.returnPicker?.set("minDate", dates[0]);
-                        this.syncMinReturnTime();
+                        this.returnAt = combineDateTime(
+                            value,
+                            splitDateTime(this.returnAt).time,
+                        );
+                        this.syncReturnPickerConstraints();
                     },
                 });
 
-                // Values restored from the query string
-                if (this.pickupAt !== "") this.syncMinReturnTime();
+                flatpickr(this.$refs.pickupTimeInput, {
+                    ...timeOptions,
+                    defaultDate: pickupInitial.time || undefined,
+                    onChange: (_dates, value) => {
+                        this.pickupAt = combineDateTime(
+                            splitDateTime(this.pickupAt).date,
+                            value,
+                        );
+                        this.syncReturnPickerConstraints();
+                    },
+                });
+
+                flatpickr(this.$refs.pickupDateInput, {
+                    ...dateOptions,
+                    defaultDate: pickupInitial.date || undefined,
+                    onChange: (dates, value) => {
+                        this.pickupAt = combineDateTime(
+                            value,
+                            splitDateTime(this.pickupAt).time,
+                        );
+                        this.returnDatePicker?.set("minDate", dates[0]);
+                        this.syncReturnPickerConstraints();
+                    },
+                });
+
+                if (this.pickupAt !== "") this.syncReturnPickerConstraints();
             },
 
-            // If pickup and return happen on the same day, the return
-            // time can't be earlier than the pickup time
-            syncMinReturnTime() {
-                const pickupDate = this.pickupAt.split(" ")[0];
-                const returnDate = this.returnAt.split(" ")[0];
+            syncReturnPickerConstraints() {
+                const pickup = splitDateTime(this.pickupAt);
+                const ret = splitDateTime(this.returnAt);
 
-                if (pickupDate === "") return;
+                if (!pickup.date) return;
 
-                this.returnPicker?.set(
-                    "minDate",
-                    pickupDate === returnDate ? this.pickupAt : pickupDate,
-                );
+                const pickupDateObj = new Date(pickup.date);
+
+                this.returnDatePicker?.set("minDate", pickupDateObj);
+
+                if (pickup.date === ret.date && pickup.time) {
+                    this.returnTimePicker?.set("minTime", pickup.time);
+                } else {
+                    this.returnTimePicker?.set("minTime", "06:00");
+                }
             },
 
             get pickupError() {

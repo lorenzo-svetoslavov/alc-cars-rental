@@ -1,5 +1,4 @@
 ---
-import CarSelectFilter from "@/components/fleet/CarSelectFilter.astro";
 import RentalSearchFields from "@/components/shared/RentalSearchFields.astro";
 import type { CarFilters } from "@/lib/cars";
 import { rentalSearchData } from "@/lib/rental-search";
@@ -12,14 +11,7 @@ interface Props {
 
 const { filters = {}, action = "/rent-a-car" } = Astro.props;
 
-const {
-    category = "",
-    transmission = "",
-    fuel = "",
-    maxPrice,
-    pickupAt = "",
-    returnAt = "",
-} = filters;
+const { pickupAt = "", returnAt = "" } = filters;
 ---
 
 <form
@@ -28,63 +20,21 @@ const {
     method="get"
     action={action}
     @submit="onSubmit($event)"
-    class="rounded-xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6"
+    class="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5"
 >
-    <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2">
         <RentalSearchFields />
-
-        <CarSelectFilter
-            group="category"
-            label="Category"
-            placeholder="All categories"
-            selected={category}
-        />
-
-        <CarSelectFilter
-            group="transmission"
-            label="Transmission"
-            placeholder="Any transmission"
-            selected={transmission}
-        />
-
-        <CarSelectFilter
-            group="fuel"
-            label="Fuel"
-            placeholder="Any fuel"
-            selected={fuel}
-        />
-
-        <div>
-            <label class="text-sm font-bold mb-1" for="maxPrice">Max price / day</label>
-            <div class="relative">
-                <input
-                    type="number"
-                    id="maxPrice"
-                    name="maxPrice"
-                    min="0"
-                    step="5"
-                    placeholder="No limit"
-                    value={maxPrice}
-                    class="input input-bordered w-full pr-8 focus:border-slate-400 focus:outline-slate-400"
-                />
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                    €
-                </span>
-            </div>
-        </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-4 mt-5 pt-5 border-t border-slate-200">
-        <div class="flex items-center gap-3">
-            <a href={action} class="btn btn-ghost text-slate-600">
-                Reset
-            </a>
-            <button
-                type="submit"
-                class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
-            >
-                Apply filters
-            </button>
-        </div>
+    <div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-200">
+        <a href={action} class="btn btn-ghost text-slate-600">
+            Reset
+        </a>
+        <button
+            type="submit"
+            class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-none"
+        >
+            Search
+        </button>
     </div>
 </form>
