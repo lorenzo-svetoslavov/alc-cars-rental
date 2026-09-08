@@ -1,0 +1,95 @@
+---
+import AgendaCalendar from "@/components/agenda/AgendaCalendar.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getAgendaRows } from "@/lib/bookings";
+import { getCars } from "@/lib/cars";
+
+const now = new Date();
+
+const queryMonth = Astro.url.searchParams.get("month");
+let month: Date;
+if (queryMonth && /^\d{4}-\d{2}$/.test(queryMonth)) {
+    const [y, m] = queryMonth.split("-").map(Number);
+    if (y >= 2000 && y <= 2100 && m >= 1 && m <= 12) {
+        month = new Date(y, m - 1, 1);
+    } else {
+        month = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+} else {
+    month = new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+const year = month.getFullYear();
+
+const prevMonth = new Date(year, month.getMonth() - 1, 1);
+const nextMonth = new Date(year, month.getMonth() + 1, 1);
+
+const prevKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
+const nextKey = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
+
+const fullMonthNames = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+let cars: Awaited<ReturnType<typeof getCars>> = [];
+let rows: Awaited<ReturnType<typeof getAgendaRows>> = [];
+let error: string | null = null;
+
+try {
+    cars = await getCars();
+    rows = await getAgendaRows(month, cars);
+} catch (e) {
+    error = e instanceof Error ? e.message : "Error inesperado";
+}
+---
+
+<BaseLayout title="Agenda · ALC Cars">
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-6 flex flex-col gap-4">
+            <h1 class="text-3xl font-bold capitalize">Agenda</h1>
+
+            <div class="flex items-center gap-2">
+                <a
+                    href={`/agenda?month=${prevKey}`}
+                    class="btn btn-circle btn-sm btn-ghost bg-base-200 hover:bg-base-300"
+                    aria-label="Mes anterior"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+
+                <span class="text-lg font-bold min-w-[180px] text-center">
+                    {fullMonthNames[month.getMonth()]} {year}
+                </span>
+
+                <a
+                    href={`/agenda?month=${nextKey}`}
+                    class="btn btn-circle btn-sm btn-ghost bg-base-200 hover:bg-base-300"
+                    aria-label="Mes siguiente"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+        </header>
+
+        {error ? (
+            <div class="alert alert-error" role="alert">
+                <span>{error}</span>
+            </div>
+        ) : cars.length === 0 ? (
+            <p class="text-slate-500 text-center py-12">
+                No hay vehículos en la flota para mostrar en la agenda.
+            </p>
+        ) : (
+            <div class="card bg-base-100 border shadow-sm">
+                <div class="card-body p-4 sm:p-5">
+                    <AgendaCalendar month={month} rows={rows} />
+                </div>
+            </div>
+        )}
+    </div>
+</BaseLayout>

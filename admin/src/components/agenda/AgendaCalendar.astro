@@ -1,0 +1,199 @@
+---
+import type { AgendaRow } from "@/lib/bookings";
+
+interface Props {
+    month: Date;
+    rows: AgendaRow[];
+}
+
+const { month, rows } = Astro.props;
+const year = month.getFullYear();
+const daysInMonth = new Date(year, month.getMonth() + 1, 0).getDate();
+const monthKey =
+    String(year).padStart(4, "0") +
+    "-" +
+    String(month.getMonth() + 1).padStart(2, "0");
+const cells: Array<number> = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+const gridStyle = `grid-template-columns: 11rem repeat(${daysInMonth}, minmax(0,1fr));`;
+
+const BOOKING_COLOR = "bg-orange-500";
+
+function formatTime(iso: string): string {
+    return new Date(iso).toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+    });
+}
+
+function formatDateTime(iso: string): string {
+    return `${formatDate(iso)} ${formatTime(iso)}`;
+}
+---
+
+<style>
+    .agenda-grid {
+        display: grid;
+        min-width: 1100px;
+    }
+
+    .cell-tip {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .cell-tip .tip {
+        display: none;
+        position: fixed;
+        z-index: 100;
+        background: #ffffff;
+        border: 1px solid oklch(var(--bc) / 0.15);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+    }
+
+    .lane-row + .lane-row .lane-label {
+        border-top: none;
+    }
+</style>
+
+<div class="overflow-x-auto" id="agenda-scroll">
+    <div class="agenda-grid sticky top-0 z-20" style={gridStyle}>
+        <div class="sticky left-0 z-30 bg-base-100 border border-base-300 px-3 py-2 text-sm font-semibold">
+            Vehículo
+        </div>
+        {cells.map((day, index) => (
+            <div
+                class:list={[
+                    "border border-base-300 px-0 py-2 text-center text-[11px]",
+                    index % 2 === 0
+                        ? "bg-base-100 text-slate-600"
+                        : "bg-base-200 text-slate-600",
+                ]}
+            >
+                {day}
+            </div>
+        ))}
+    </div>
+
+    {rows.map(({ car, bookedDays, totalLanes }) => {
+        const label = `${car.make} ${car.model}`;
+        const lanes = totalLanes || 1;
+
+        return (
+            Array.from({ length: lanes }, (_, laneIndex) => (
+                <div class="agenda-grid lane-row" style={gridStyle}>
+                    {laneIndex === 0 ? (
+                        <div
+                            class:list={[
+                                "sticky left-0 z-10 bg-base-100 border border-base-300 px-3 h-7 text-xs font-medium flex items-center gap-2 lane-label",
+                                car.available ? "" : "opacity-60",
+                            ]}
+                        >
+                            <span class="truncate">{label}</span>
+                            <span class="text-[10px] text-slate-400 shrink-0">
+                                {car.plate_number}
+                            </span>
+                        </div>
+                    ) : (
+                        <div
+                            class:list={[
+                                "sticky left-0 z-10 bg-base-100 border border-base-300 h-7 lane-label",
+                            ]}
+                        />
+                    )}
+                    {cells.map((day, index) => {
+                        const dateKey = `${monthKey}-${String(day).padStart(2, "0")}`;
+                        const dayInfos = bookedDays.get(dateKey) ?? [];
+                        const matchingInfo = dayInfos.find((d) => d.lane === laneIndex);
+                        const booked = !!matchingInfo;
+
+                        const cellClasses = ["border border-base-300"];
+                        if (booked) {
+                            cellClasses.push(BOOKING_COLOR, "cell-tip");
+
+                        } else {
+                            cellClasses.push(
+                                index % 2 === 0 ? "bg-base-100" : "bg-base-200",
+                            );
+                        }
+
+                        return (
+                            <div class:list={cellClasses}>
+                                {booked && matchingInfo && (
+                                    <div class="tip">
+                                        {dayInfos.length > 1 && (
+                                            <div class="text-[10px] text-slate-500 mb-1">
+                                                {dayInfos.length} reservas este día
+                                            </div>
+                                        )}
+                                        <div class="font-bold">
+                                            {matchingInfo.booking.guest_name || "Sin nombre"}
+                                        </div>
+                                        <div>
+                                            ↑ Recogida: {formatDateTime(matchingInfo.booking.pickup_at)}
+                                        </div>
+                                        <div>
+                                            ↓ Devolución: {formatDateTime(matchingInfo.booking.dropoff_at)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            ))
+        );
+    })}
+</div>
+
+<script>
+    function showTip(el: HTMLElement) {
+        const tip = el.querySelector<HTMLElement>(".tip");
+        if (!tip) return;
+        const rect = el.getBoundingClientRect();
+        tip.style.left = `${rect.left + rect.width / 2}px`;
+        tip.style.top = `${rect.top - 4}px`;
+        tip.style.transform = "translate(-50%, -100%)";
+        tip.style.display = "block";
+    }
+
+    function hideAllTips() {
+        document.querySelectorAll<HTMLElement>(".tip").forEach((tip) => {
+            tip.style.display = "none";
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll<HTMLElement>(".cell-tip").forEach((cell) => {
+            cell.addEventListener("mouseenter", () => showTip(cell));
+            cell.addEventListener("mouseleave", hideAllTips);
+            cell.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                hideAllTips();
+                showTip(cell);
+            }, { passive: false });
+        });
+
+        document.addEventListener("touchstart", (e) => {
+            if (!(e.target as HTMLElement).closest(".cell-tip")) {
+                hideAllTips();
+            }
+        }, { passive: true });
+
+        document
+            .getElementById("agenda-scroll")
+            ?.addEventListener("scroll", hideAllTips, { passive: true });
+    });
+</script>
