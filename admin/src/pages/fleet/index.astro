@@ -15,13 +15,24 @@ try {
 
 <BaseLayout title="Flota · ALC Cars">
     <div class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:py-12">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold">Flota</h1>
-            <p class="text-slate-500 mt-1">
-                {error
-                    ? "No se pudo cargar la flota"
-                    : `${cars.length} vehículo${cars.length === 1 ? "" : "s"}`}
-            </p>
+        <header class="mb-8 flex items-start justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold">Flota</h1>
+                <p class="text-slate-500 mt-1">
+                    {error
+                        ? "No se pudo cargar la flota"
+                        : `${cars.length} vehículo${cars.length === 1 ? "" : "s"}`}
+                </p>
+            </div>
+            <a
+                href="/fleet/new"
+                class="btn btn-warning btn-sm gap-1"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Nuevo vehículo
+            </a>
         </header>
 
         {error ? (

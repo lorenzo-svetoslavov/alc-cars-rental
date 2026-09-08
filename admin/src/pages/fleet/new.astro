@@ -1,0 +1,210 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { createCar } from "@/lib/cars";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { CAR_OPTIONS } from "@/types/car";
+
+let saveError: string | null = null;
+let formData: Record<string, string> = {};
+
+if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData();
+
+    formData = Object.fromEntries(
+        [...form.entries()].filter(([k]) => k !== "image"),
+    ) as Record<string, string>;
+
+    const make = (form.get("make") ?? "").toString().trim();
+    const model = (form.get("model") ?? "").toString().trim();
+    const image = form.get("image");
+
+    if (!make || !model) {
+        saveError = "Fabricante y modelo son obligatorios.";
+    } else if (!(image instanceof File) || image.size === 0) {
+        saveError = "Debes subir una imagen del vehículo.";
+    } else {
+        const transmission = (form.get("transmission") ?? "manual").toString();
+        const fuel = (form.get("fuel") ?? "gasoline").toString();
+        const category = (form.get("category") ?? "compact").toString();
+
+        if (!(transmission in CAR_OPTIONS.transmission)) {
+            saveError = "Transmisión no válida.";
+        } else if (!(fuel in CAR_OPTIONS.fuel)) {
+            saveError = "Combustible no válido.";
+        } else if (!(category in CAR_OPTIONS.category)) {
+            saveError = "Categoría no válida.";
+        } else {
+            try {
+                const ext = image.name.split(".").pop() ?? "jpg";
+                const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+                const { error: uploadError } = await supabaseAdmin.storage
+                    .from("car-images")
+                    .upload(path, image, {
+                        contentType: image.type,
+                        upsert: false,
+                    });
+
+                if (uploadError) {
+                    throw new Error(`Error al subir la imagen: ${uploadError.message}`);
+                }
+
+                const { data: urlData } = supabaseAdmin.storage
+                    .from("car-images")
+                    .getPublicUrl(path);
+
+                await createCar({
+                    make,
+                    model,
+                    plate_number: (form.get("plate_number") ?? "").toString().trim(),
+                    model_year: Number(form.get("model_year")),
+                    color: (form.get("color") ?? "").toString().trim() || null,
+                    transmission,
+                    fuel,
+                    category,
+                    mileage: Number(form.get("mileage")),
+                    seats: Number(form.get("seats")),
+                    doors: Number(form.get("doors")),
+                    air_conditioning: form.get("air_conditioning") === "on",
+                    daily_rate: Number(form.get("daily_rate")),
+                    available: form.get("available") !== "off",
+                    image_url: urlData.publicUrl,
+                });
+
+                return Astro.redirect("/fleet");
+            } catch (e) {
+                saveError = e instanceof Error ? e.message : "Error inesperado";
+            }
+        }
+    }
+}
+
+const v = (name: string, fallback?: string | number | null) =>
+    formData[name] ?? (fallback?.toString() ?? "");
+---
+
+<BaseLayout title="Nuevo vehículo · ALC Cars">
+    <div class="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Nuevo vehículo</h1>
+                <p class="text-slate-500 mt-1">Añadir un vehículo a la flota</p>
+            </div>
+            <a href="/fleet" class="btn btn-ghost btn-sm">Volver</a>
+        </header>
+
+        {saveError && (
+            <div class="alert alert-error mb-6" role="alert">
+                <span>{saveError}</span>
+            </div>
+        )}
+
+        <form method="post" enctype="multipart/form-data"
+            class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card-body gap-4">
+                <div class="grid gap-4 md:grid-cols-2">
+                    <label class="form-control">
+                        <span class="label">Marca *</span>
+                        <input class="input input-bordered" type="text" name="make"
+                            value={v("make")} required />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Modelo *</span>
+                        <input class="input input-bordered" type="text" name="model"
+                            value={v("model")} required />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Color</span>
+                        <input class="input input-bordered" type="text" name="color"
+                            value={v("color")} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Año</span>
+                        <input class="input input-bordered" type="number" name="model_year"
+                            value={v("model_year")} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Matrícula</span>
+                        <input class="input input-bordered" type="text" name="plate_number"
+                            value={v("plate_number")} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Categoría</span>
+                        <select class="select select-bordered" name="category">
+                            {Object.entries(CAR_OPTIONS.category).map(([value, label]) => (
+                                <option value={value} selected={v("category") === value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Transmisión</span>
+                        <select class="select select-bordered" name="transmission">
+                            {Object.entries(CAR_OPTIONS.transmission).map(([value, label]) => (
+                                <option value={value} selected={v("transmission") === value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Combustible</span>
+                        <select class="select select-bordered" name="fuel">
+                            {Object.entries(CAR_OPTIONS.fuel).map(([value, label]) => (
+                                <option value={value} selected={v("fuel") === value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Kilometraje</span>
+                        <input class="input input-bordered" type="number" name="mileage"
+                            value={v("mileage", 0)} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Plazas</span>
+                        <input class="input input-bordered" type="number" name="seats"
+                            value={v("seats")} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Puertas</span>
+                        <input class="input input-bordered" type="number" name="doors"
+                            value={v("doors")} />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Tarifa diaria (€)</span>
+                        <input class="input input-bordered" type="number" step="0.01"
+                            name="daily_rate" value={v("daily_rate")} />
+                    </label>
+                    <label class="form-control md:col-span-2">
+                        <span class="label">Imagen del vehículo *</span>
+                        <input class="file-input file-input-bordered w-full" type="file"
+                            name="image" accept="image/*" required />
+                    </label>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="flex flex-wrap gap-6">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input class="toggle toggle-primary" type="checkbox"
+                            name="available" checked={formData.available ? formData.available !== "off" : true} />
+                        <span class="label-text">Disponible</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input class="toggle toggle-primary" type="checkbox"
+                            name="air_conditioning" checked={formData.air_conditioning ? formData.air_conditioning === "on" : false} />
+                        <span class="label-text">Aire acondicionado</span>
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-2">
+                    <a href="/fleet" class="btn btn-ghost">Cancelar</a>
+                    <button type="submit" class="btn btn-warning">Crear vehículo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</BaseLayout>

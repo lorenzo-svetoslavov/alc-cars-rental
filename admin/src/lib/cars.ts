@@ -2,9 +2,9 @@ import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Car } from "@/types/car";
 
-export type CarUpdate = Partial<
-    Omit<Car, "id" | "created_at" | "updated_at">
->;
+export type CarCreate = Omit<Car, "id" | "created_at" | "updated_at">;
+
+export type CarUpdate = Partial<CarCreate>;
 
 export async function getCarById(id: string): Promise<Car | null> {
     const { data, error } = await supabase
@@ -29,6 +29,20 @@ export async function updateCar(id: string, updates: CarUpdate): Promise<void> {
     if (error) {
         throw new Error(`Error al actualizar el coche: ${error.message}`);
     }
+}
+
+export async function createCar(data: CarCreate): Promise<Car> {
+    const { data: car, error } = await supabaseAdmin
+        .from("cars")
+        .insert(data)
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(`Error al crear el coche: ${error.message}`);
+    }
+
+    return car as Car;
 }
 
 export async function getCars(): Promise<Car[]> {
