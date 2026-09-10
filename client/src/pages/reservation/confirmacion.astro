@@ -19,6 +19,7 @@ if (carId) {
         .from("cars")
         .select("*")
         .eq("id", carId)
+        .is("deleted_at", null)
         .single();
     car = data;
 }
