@@ -45,4 +45,5 @@ export interface Car {
     image_url: string;
     created_at: string;
     updated_at: string;
+    deleted_at: string | null;
 }

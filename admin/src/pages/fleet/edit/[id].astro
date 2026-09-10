@@ -223,10 +223,10 @@ const v = (name: string, fallback?: string | number | null) =>
                 <div class="card bg-base-100 border border-error/30 shadow-sm mt-6">
                     <div class="card-body">
                         <h2 class="card-title text-error">Zona de peligro</h2>
-                        <p class="text-slate-500">Eliminar este vehículo es una acción permanente e irreversible.</p>
+                        <p class="text-slate-500">Dar de baja este vehículo hará que deje de aparecer en la flota. Las reservas existentes se conservarán.</p>
                         <div class="card-actions justify-end">
                             <button class="btn btn-error" onclick="document.getElementById('delete-modal').showModal()">
-                                Eliminar vehículo
+                                Dar de baja
                             </button>
                         </div>
                     </div>
@@ -234,12 +234,12 @@ const v = (name: string, fallback?: string | number | null) =>
 
                 <dialog id="delete-modal" class="modal">
                     <div class="modal-box">
-                        <h3 class="font-bold text-lg">Confirmar eliminación</h3>
+                        <h3 class="font-bold text-lg">Confirmar baja</h3>
                         <p class="py-4">
-                            ¿Estás seguro de que quieres eliminar <strong>{car.make} {car.model} {car.model_year}</strong>
+                            ¿Estás seguro de que quieres dar de baja <strong>{car.make} {car.model} {car.model_year}</strong>
                             {car.color && <> de color <strong>{car.color}</strong></>}
                             {car.plate_number && <> con matrícula <strong>{car.plate_number}</strong></>}?
-                            Esta acción no se puede deshacer.
+                            El vehículo dejará de aparecer en la flota.
                         </p>
                         <div class="modal-action">
                             <form method="dialog">
@@ -247,7 +247,7 @@ const v = (name: string, fallback?: string | number | null) =>
                             </form>
                             <form method="post">
                                 <input type="hidden" name="_action" value="delete" />
-                                <button type="submit" class="btn btn-error">Sí, eliminar</button>
+                                <button type="submit" class="btn btn-error">Sí, dar de baja</button>
                             </form>
                         </div>
                     </div>

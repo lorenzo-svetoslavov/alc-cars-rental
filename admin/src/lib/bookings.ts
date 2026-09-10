@@ -133,6 +133,11 @@ export async function getAgendaRows(
     const rows: AgendaRow[] = [];
     for (const car of cars) {
         const carBookings = bookings.filter((b) => b.car_id === car.id);
+
+        if (car.deleted_at && carBookings.length === 0) {
+            continue;
+        }
+
         const bookedDays = assignLanes(carBookings, startKey, endKey);
 
         let totalLanes = 0;

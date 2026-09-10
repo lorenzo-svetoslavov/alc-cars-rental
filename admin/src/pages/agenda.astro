@@ -2,7 +2,7 @@
 import AgendaCalendar from "@/components/agenda/AgendaCalendar.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getAgendaRows } from "@/lib/bookings";
-import { getCars } from "@/lib/cars";
+import { getAllCars } from "@/lib/cars";
 
 const now = new Date();
 
@@ -32,12 +32,12 @@ const fullMonthNames = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-let cars: Awaited<ReturnType<typeof getCars>> = [];
+let cars: Awaited<ReturnType<typeof getAllCars>> = [];
 let rows: Awaited<ReturnType<typeof getAgendaRows>> = [];
 let error: string | null = null;
 
 try {
-    cars = await getCars();
+    cars = await getAllCars();
     rows = await getAgendaRows(month, cars);
 } catch (e) {
     error = e instanceof Error ? e.message : "Error inesperado";

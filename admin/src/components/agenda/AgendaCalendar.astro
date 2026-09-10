@@ -98,13 +98,16 @@ function formatDateTime(iso: string): string {
                         <div
                             class:list={[
                                 "sticky left-0 z-10 bg-base-100 border border-base-300 px-3 h-7 text-xs font-medium flex items-center gap-2 lane-label",
-                                car.available ? "" : "opacity-60",
+                                car.deleted_at ? "" : car.available ? "" : "opacity-60",
                             ]}
                         >
                             <span class="truncate">{label}</span>
                             <span class="text-[10px] text-slate-400 shrink-0">
                                 {car.plate_number}
                             </span>
+                            {car.deleted_at && (
+                                <span class="text-[10px] text-error shrink-0">Baja</span>
+                            )}
                         </div>
                     ) : (
                         <div
