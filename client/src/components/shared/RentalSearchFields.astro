@@ -69,6 +69,7 @@ const returnTimeId = `${idPrefix}return-time`;
         </div>
     </div>
     <p x-show="returnError" x-text="returnError" x-cloak class="text-sm text-red-600 mt-1"></p>
+    <p x-show="minRentalError" x-text="minRentalError" x-cloak class="text-sm text-red-600 mt-1"></p>
 </div>
 
 <script>
@@ -167,7 +168,9 @@ const returnTimeId = `${idPrefix}return-time`;
                             value,
                             splitDateTime(this.pickupAt).time,
                         );
-                        this.returnDatePicker?.set("minDate", dates[0]);
+                        const minReturn = new Date(dates[0]);
+                        minReturn.setDate(minReturn.getDate() + 2);
+                        this.returnDatePicker?.set("minDate", minReturn);
                         this.syncReturnPickerConstraints();
                     },
                 });
@@ -182,8 +185,10 @@ const returnTimeId = `${idPrefix}return-time`;
                 if (!pickup.date) return;
 
                 const pickupDateObj = new Date(pickup.date);
+                const minReturnDate = new Date(pickupDateObj);
+                minReturnDate.setDate(minReturnDate.getDate() + 2);
 
-                this.returnDatePicker?.set("minDate", pickupDateObj);
+                this.returnDatePicker?.set("minDate", minReturnDate);
 
                 if (pickup.date === ret.date && pickup.time) {
                     this.returnTimePicker?.set("minTime", pickup.time);
@@ -204,6 +209,21 @@ const returnTimeId = `${idPrefix}return-time`;
                 return "Please select a return date & time.";
             },
 
+            get minRentalError() {
+                if (!this.submitted || !this.requireDates) return "";
+                const pickup = splitDateTime(this.pickupAt);
+                const ret = splitDateTime(this.returnAt);
+                if (!pickup.date || !ret.date) return "";
+                const pickupDate = new Date(pickup.date);
+                const returnDate = new Date(ret.date);
+                const diffDays = Math.ceil(
+                    (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24),
+                );
+                if (diffDays < 2)
+                    return "Minimum rental period is 2 days.";
+                return "";
+            },
+
             get ageError() {
                 if (!this.submitted || !this.requireAge || this.ageConfirmed)
                     return "";
@@ -214,6 +234,7 @@ const returnTimeId = `${idPrefix}return-time`;
                 return (
                     this.pickupError === "" &&
                     this.returnError === "" &&
+                    this.minRentalError === "" &&
                     this.ageError === ""
                 );
             },
