@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { getCarById, updateCar } from "@/lib/cars";
+import { getCarById, updateCar, deleteCar } from "@/lib/cars";
 import { CAR_OPTIONS, type Car } from "@/types/car";
 
 const id = Astro.params.id;
@@ -8,6 +8,7 @@ const id = Astro.params.id;
 let car: Car | null = null;
 let loadError: string | null = null;
 let saveError: string | null = null;
+let deleteError: string | null = null;
 let formData: Record<string, string> = {};
 
 if (!id) {
@@ -22,47 +23,57 @@ if (!id) {
 
 if (Astro.request.method === "POST" && car) {
     const form = await Astro.request.formData();
+    const action = form.get("_action");
 
-    formData = Object.fromEntries(form.entries()) as Record<string, string>;
-
-    const make = (form.get("make") ?? "").toString().trim();
-    const model = (form.get("model") ?? "").toString().trim();
-
-    if (!make || !model) {
-        saveError = "Fabricante y modelo son obligatorios.";
+    if (action === "delete") {
+        try {
+            await deleteCar(car.id);
+            return Astro.redirect("/fleet");
+        } catch (e) {
+            deleteError = e instanceof Error ? e.message : "Error inesperado";
+        }
     } else {
-        const transmission = (form.get("transmission") ?? "manual").toString();
-        const fuel = (form.get("fuel") ?? "gasoline").toString();
-        const category = (form.get("category") ?? "compact").toString();
+        formData = Object.fromEntries(form.entries()) as Record<string, string>;
 
-        if (!(transmission in CAR_OPTIONS.transmission)) {
-            saveError = "Transmisión no válida.";
-        } else if (!(fuel in CAR_OPTIONS.fuel)) {
-            saveError = "Combustible no válido.";
-        } else if (!(category in CAR_OPTIONS.category)) {
-            saveError = "Categoría no válida.";
+        const make = (form.get("make") ?? "").toString().trim();
+        const model = (form.get("model") ?? "").toString().trim();
+
+        if (!make || !model) {
+            saveError = "Fabricante y modelo son obligatorios.";
         } else {
-            try {
-                await updateCar(car.id, {
-                    make,
-                    model,
-                    plate_number: (form.get("plate_number") ?? "").toString().trim(),
-                    model_year: Number(form.get("model_year")),
-                    color: (form.get("color") ?? "").toString().trim() || null,
-                    transmission,
-                    fuel,
-                    category,
-                    mileage: Number(form.get("mileage")),
-                    seats: Number(form.get("seats")),
-                    doors: Number(form.get("doors")),
-                    air_conditioning: form.get("air_conditioning") === "on",
-                    daily_rate: Number(form.get("daily_rate")),
-                    available: form.get("available") === "on",
-                    image_url: (form.get("image_url") ?? "").toString().trim(),
-                });
-                return Astro.redirect("/fleet");
-            } catch (e) {
-                saveError = e instanceof Error ? e.message : "Error inesperado";
+            const transmission = (form.get("transmission") ?? "manual").toString();
+            const fuel = (form.get("fuel") ?? "gasoline").toString();
+            const category = (form.get("category") ?? "compact").toString();
+
+            if (!(transmission in CAR_OPTIONS.transmission)) {
+                saveError = "Transmisión no válida.";
+            } else if (!(fuel in CAR_OPTIONS.fuel)) {
+                saveError = "Combustible no válido.";
+            } else if (!(category in CAR_OPTIONS.category)) {
+                saveError = "Categoría no válida.";
+            } else {
+                try {
+                    await updateCar(car.id, {
+                        make,
+                        model,
+                        plate_number: (form.get("plate_number") ?? "").toString().trim(),
+                        model_year: Number(form.get("model_year")),
+                        color: (form.get("color") ?? "").toString().trim() || null,
+                        transmission,
+                        fuel,
+                        category,
+                        mileage: Number(form.get("mileage")),
+                        seats: Number(form.get("seats")),
+                        doors: Number(form.get("doors")),
+                        air_conditioning: form.get("air_conditioning") === "on",
+                        daily_rate: Number(form.get("daily_rate")),
+                        available: form.get("available") === "on",
+                        image_url: (form.get("image_url") ?? "").toString().trim(),
+                    });
+                    return Astro.redirect("/fleet");
+                } catch (e) {
+                    saveError = e instanceof Error ? e.message : "Error inesperado";
+                }
             }
         }
     }
@@ -93,6 +104,11 @@ const v = (name: string, fallback?: string | number | null) =>
                 {saveError && (
                     <div class="alert alert-error mb-6" role="alert">
                         <span>{saveError}</span>
+                    </div>
+                )}
+                {deleteError && (
+                    <div class="alert alert-error mb-6" role="alert">
+                        <span>{deleteError}</span>
                     </div>
                 )}
                 <form method="post" class="card bg-base-100 border border-base-300 shadow-sm">
@@ -203,6 +219,42 @@ const v = (name: string, fallback?: string | number | null) =>
                         </div>
                     </div>
                 </form>
+
+                <div class="card bg-base-100 border border-error/30 shadow-sm mt-6">
+                    <div class="card-body">
+                        <h2 class="card-title text-error">Zona de peligro</h2>
+                        <p class="text-slate-500">Eliminar este vehículo es una acción permanente e irreversible.</p>
+                        <div class="card-actions justify-end">
+                            <button class="btn btn-error" onclick="document.getElementById('delete-modal').showModal()">
+                                Eliminar vehículo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <dialog id="delete-modal" class="modal">
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">Confirmar eliminación</h3>
+                        <p class="py-4">
+                            ¿Estás seguro de que quieres eliminar <strong>{car.make} {car.model} {car.model_year}</strong>
+                            {car.color && <> de color <strong>{car.color}</strong></>}
+                            {car.plate_number && <> con matrícula <strong>{car.plate_number}</strong></>}?
+                            Esta acción no se puede deshacer.
+                        </p>
+                        <div class="modal-action">
+                            <form method="dialog">
+                                <button class="btn btn-ghost">Cancelar</button>
+                            </form>
+                            <form method="post">
+                                <input type="hidden" name="_action" value="delete" />
+                                <button type="submit" class="btn btn-error">Sí, eliminar</button>
+                            </form>
+                        </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop">
+                        <button>close</button>
+                    </form>
+                </dialog>
             </>
         )}
     </div>

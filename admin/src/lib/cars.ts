@@ -45,6 +45,17 @@ export async function createCar(data: CarCreate): Promise<Car> {
     return car as Car;
 }
 
+export async function deleteCar(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+        .from("cars")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        throw new Error(`Error al eliminar el coche: ${error.message}`);
+    }
+}
+
 export async function getCars(): Promise<Car[]> {
     const { data, error } = await supabase
         .from("cars")
