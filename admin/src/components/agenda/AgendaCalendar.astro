@@ -17,6 +17,7 @@ const cells: Array<number> = Array.from({ length: daysInMonth }, (_, i) => i + 1
 const gridStyle = `grid-template-columns: 11rem repeat(${daysInMonth}, minmax(0,1fr));`;
 
 const BOOKING_COLOR = "bg-orange-500";
+const PENDING_COLOR = "bg-amber-400";
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString("es-ES", {
@@ -124,7 +125,12 @@ function formatDateTime(iso: string): string {
 
                         const cellClasses = ["border border-base-300"];
                         if (booked) {
-                            cellClasses.push(BOOKING_COLOR, "cell-tip");
+                            cellClasses.push(
+                                matchingInfo.booking.confirmed_at
+                                    ? BOOKING_COLOR
+                                    : PENDING_COLOR,
+                                "cell-tip",
+                            );
 
                         } else {
                             cellClasses.push(
@@ -143,6 +149,11 @@ function formatDateTime(iso: string): string {
                                         )}
                                         <div class="font-bold">
                                             {matchingInfo.booking.guest_name || "Sin nombre"}
+                                        </div>
+                                        <div>
+                                            {matchingInfo.booking.confirmed_at
+                                                ? "Confirmada"
+                                                : "Pendiente"}
                                         </div>
                                         <div>
                                             ↑ Recogida: {formatDateTime(matchingInfo.booking.pickup_at)}

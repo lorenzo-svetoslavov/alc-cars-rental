@@ -216,16 +216,16 @@ const total = carTotal + extrasTotal;
             <!-- Success state -->
             <div x-show="!loading && !error && booking" x-cloak>
                 <header class="text-center mb-10">
-                    <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    <div class="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                         </svg>
                     </div>
                     <h1 class="text-2xl md:text-3xl font-bold text-slate-800">
-                        Reservation confirmed!
+                        Reservation received!
                     </h1>
                     <p class="text-slate-400 mt-1 text-sm">
-                        Your booking has been successfully created
+                        Your booking is pending confirmation from our team. We will contact you shortly.
                     </p>
                 </header>
 
