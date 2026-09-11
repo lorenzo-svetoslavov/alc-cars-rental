@@ -2,66 +2,137 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getCustomers } from "@/lib/customers";
 
-let customers: Awaited<ReturnType<typeof getCustomers>> = [];
+const PAGE_SIZE = 10;
+const PAGE_NUMBERS = 5;
+
+const rawPage = Number(Astro.url.searchParams.get("page") ?? "1");
+let page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+
+let result: Awaited<ReturnType<typeof getCustomers>> = { data: [], count: 0 };
 let error: string | null = null;
 
 try {
-    customers = await getCustomers();
+    result = await getCustomers({ page, pageSize: PAGE_SIZE });
+
+    if (result.data.length === 0 && result.count > 0) {
+        page = Math.ceil(result.count / PAGE_SIZE);
+        result = await getCustomers({ page, pageSize: PAGE_SIZE });
+    }
 } catch (e) {
     error = e instanceof Error ? e.message : "Error inesperado";
 }
+
+const customers = result.data;
+const total = result.count;
+const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+const to = Math.min(total, page * PAGE_SIZE);
+
+interface PageLink {
+    label: number | "prev" | "next";
+    href: string;
+    active: boolean;
+}
+
+const pages: PageLink[] = [];
+if (page > 1) pages.push({ label: "prev", href: `?page=${page - 1}`, active: false });
+const start = Math.max(1, page - Math.floor(PAGE_NUMBERS / 2));
+const end = Math.min(totalPages, start + PAGE_NUMBERS - 1);
+const adjustedStart = Math.max(1, end - PAGE_NUMBERS + 1);
+for (let p = adjustedStart; p <= end; p++) {
+    pages.push({ label: p, href: `?page=${p}`, active: p === page });
+}
+if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, active: false });
 ---
 
 <BaseLayout title="Clientes · ALC Cars">
-    <div class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:py-12">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold">Clientes</h1>
-            <p class="text-slate-500 mt-1">
-                {error
-                    ? "No se pudieron cargar los clientes"
-                    : `${customers.length} cliente${customers.length === 1 ? "" : "s"}`}
-            </p>
-        </header>
+    <div class="flex-1 bg-base-200 p-4 sm:p-8">
+        <div class="max-w-7xl w-full mx-auto">
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold">Clientes</h1>
+                <p class="text-slate-500 mt-1">
+                    {error
+                        ? "No se pudieron cargar los clientes"
+                        : total === 0
+                          ? "No hay clientes registrados"
+                          : `Mostrando ${from}–${to} de ${total} cliente${total === 1 ? "" : "s"}`}
+                </p>
+            </header>
 
-        {error ? (
-            <div class="alert alert-error" role="alert">
-                <span>{error}</span>
-            </div>
-        ) : customers.length === 0 ? (
-            <p class="text-slate-500 text-center py-12">
-                No hay clientes registrados.
-            </p>
-        ) : (
-            <div class="overflow-x-auto">
-                <table class="table table-zebra">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Email</th>
-                            <th>Teléfono</th>
-                            <th class="hidden sm:table-cell">Dirección</th>
-                            <th class="hidden md:table-cell">Fecha Registro</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {customers.map((customer) => (
-                            <tr>
-                                <td class="font-medium">
-                                    {customer.first_name} {customer.last_name}
-                                </td>
-                                <td>{customer.email || "-"}</td>
-                                <td>{customer.phone}</td>
-                                <td class="hidden sm:table-cell">
-                                    {customer.address || "-"}
-                                </td>
-                                <td class="hidden md:table-cell">
-                                    {new Date(customer.created_at).toLocaleDateString("es-ES")}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )}
+            {error ? (
+                <div class="alert alert-error" role="alert">
+                    <span>{error}</span>
+                </div>
+            ) : customers.length === 0 ? (
+                <p class="text-slate-500 text-center py-12">
+                    No hay clientes registrados.
+                </p>
+            ) : (
+                <>
+                    <div class="overflow-x-auto bg-base-100">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Teléfono</th>
+                                    <th>DNI</th>
+                                    <th>Carnet</th>
+                                    <th>Email</th>
+                                    <th>Dirección</th>
+                                    <th class="text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {customers.map((customer) => (
+                                    <tr>
+                                        <td>
+                                            {customer.first_name} {customer.last_name}
+                                        </td>
+                                        <td>{customer.phone}</td>
+                                        <td>{customer.id_number || "-"}</td>
+                                        <td>
+                                            {customer.drivers_license || "-"}
+                                        </td>
+                                        <td>{customer.email || "-"}</td>
+                                        <td>{customer.address || "-"}</td>
+                                        <td class="text-right">
+                                            <a
+                                                href={`/customers/edit/${customer.id}`}
+                                                class="btn btn-warning btn-sm gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                                </svg>
+                                                Editar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {totalPages > 1 && (
+                        <div class="mt-6 flex items-center justify-center">
+                            <div class="join">
+                                {pages.map((link) => (
+                                    <a
+                                        href={link.href}
+                                        class:list={[
+                                            "join-item",
+                                            "btn",
+                                            "btn-sm",
+                                            link.active ? "btn-active" : "",
+                                        ]}
+                                    >
+                                        {link.label === "prev" ? "«" : link.label === "next" ? "»" : link.label}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
     </div>
 </BaseLayout>

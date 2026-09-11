@@ -8,5 +8,6 @@ export interface Customer {
     drivers_license: string | null;
     created_at: string;
     updated_at: string;
+    deleted_at?: string | null;
     email?: string;
 }

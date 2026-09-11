@@ -1,0 +1,187 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+    getCustomerById,
+    updateCustomer,
+    deleteCustomer,
+} from "@/lib/customers";
+import type { Customer } from "@/types/customer";
+
+const id = Astro.params.id;
+
+let customer: Customer | null = null;
+let loadError: string | null = null;
+let saveError: string | null = null;
+let deleteError: string | null = null;
+let formData: Record<string, string> = {};
+
+if (!id) {
+    loadError = "ID de cliente no válido.";
+} else {
+    try {
+        customer = await getCustomerById(id);
+    } catch (e) {
+        loadError = e instanceof Error ? e.message : "Error inesperado";
+    }
+}
+
+if (Astro.request.method === "POST" && customer) {
+    const form = await Astro.request.formData();
+    const action = form.get("_action");
+
+    if (action === "delete") {
+        try {
+            await deleteCustomer(customer.id);
+            return Astro.redirect("/customers");
+        } catch (e) {
+            deleteError = e instanceof Error ? e.message : "Error inesperado";
+        }
+    } else {
+        formData = Object.fromEntries(form.entries()) as Record<string, string>;
+
+        const first_name = (form.get("first_name") ?? "").toString().trim();
+        const last_name = (form.get("last_name") ?? "").toString().trim();
+        const phone = (form.get("phone") ?? "").toString().trim();
+
+        if (!first_name) {
+            saveError = "El nombre es obligatorio.";
+        } else if (!last_name) {
+            saveError = "Los apellidos son obligatorios.";
+        } else if (!phone) {
+            saveError = "El teléfono es obligatorio.";
+        } else {
+            try {
+                await updateCustomer(customer.id, {
+                    first_name,
+                    last_name,
+                    phone,
+                    id_number:
+                        (form.get("id_number") ?? "").toString().trim() || null,
+                    drivers_license:
+                        (form.get("drivers_license") ?? "").toString().trim() ||
+                        null,
+                    address: (form.get("address") ?? "").toString().trim() || null,
+                });
+                return Astro.redirect("/customers");
+            } catch (e) {
+                saveError = e instanceof Error ? e.message : "Error inesperado";
+            }
+        }
+    }
+}
+
+const v = (name: string, fallback?: string | number | null) =>
+    formData[name] ?? (fallback?.toString() ?? "");
+---
+
+<BaseLayout title="Editar cliente · ALC Cars">
+    <div class="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Editar cliente</h1>
+                <p class="text-slate-500 mt-1">
+                    {customer
+                        ? `${customer.first_name} ${customer.last_name}`
+                        : ""}
+                </p>
+            </div>
+            <a href="/customers" class="btn btn-ghost btn-sm">Volver</a>
+        </header>
+
+        {loadError || !customer ? (
+            <div class="alert alert-error" role="alert">
+                <span>{loadError ?? "Cliente no encontrado."}</span>
+            </div>
+        ) : (
+            <>
+                {saveError && (
+                    <div class="alert alert-error mb-6" role="alert">
+                        <span>{saveError}</span>
+                    </div>
+                )}
+                {deleteError && (
+                    <div class="alert alert-error mb-6" role="alert">
+                        <span>{deleteError}</span>
+                    </div>
+                )}
+                <form method="post" class="card bg-base-100 border border-base-300 shadow-sm">
+                    <div class="card-body gap-4">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <label class="form-control">
+                                <span class="label">Nombre *</span>
+                                <input class="input input-bordered" type="text" name="first_name"
+                                    value={v("first_name", customer.first_name)} required />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">Apellidos *</span>
+                                <input class="input input-bordered" type="text" name="last_name"
+                                    value={v("last_name", customer.last_name)} required />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">Teléfono *</span>
+                                <input class="input input-bordered" type="tel" name="phone"
+                                    value={v("phone", customer.phone)} required />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">DNI</span>
+                                <input class="input input-bordered" type="text" name="id_number"
+                                    value={v("id_number", customer.id_number)} />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">Carnet de conducir</span>
+                                <input class="input input-bordered" type="text" name="drivers_license"
+                                    value={v("drivers_license", customer.drivers_license)} />
+                            </label>
+                            <label class="form-control">
+                                <span class="label">Dirección</span>
+                                <input class="input input-bordered" type="text" name="address"
+                                    value={v("address", customer.address)} />
+                            </label>
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-2">
+                            <a href="/customers" class="btn btn-ghost">Cancelar</a>
+                            <button type="submit" class="btn btn-warning">Guardar cambios</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="card bg-base-100 border border-error/30 shadow-sm mt-6">
+                    <div class="card-body">
+                        <h2 class="card-title text-error">Zona de peligro</h2>
+                        <p class="text-slate-500">Dar de baja este cliente hará que deje de aparecer en la lista. Las reservas existentes se conservarán.</p>
+                        <div class="card-actions justify-end">
+                            <button class="btn btn-error" onclick="document.getElementById('delete-modal').showModal()">
+                                Dar de baja
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <dialog id="delete-modal" class="modal">
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">Confirmar baja</h3>
+                        <p class="py-4">
+                            ¿Estás seguro de que quieres dar de baja a
+                            <strong>{customer.first_name} {customer.last_name}</strong>
+                            {customer.email && <> (<strong>{customer.email}</strong>)</>}?
+                            El cliente dejará de aparecer en la lista.
+                        </p>
+                        <div class="modal-action">
+                            <form method="dialog">
+                                <button class="btn btn-ghost">Cancelar</button>
+                            </form>
+                            <form method="post">
+                                <input type="hidden" name="_action" value="delete" />
+                                <button type="submit" class="btn btn-error">Sí, dar de baja</button>
+                            </form>
+                        </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop">
+                        <button>close</button>
+                    </form>
+                </dialog>
+            </>
+        )}
+    </div>
+</BaseLayout>
