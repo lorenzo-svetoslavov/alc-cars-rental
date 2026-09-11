@@ -1,0 +1,67 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getCustomers } from "@/lib/customers";
+
+let customers: Awaited<ReturnType<typeof getCustomers>> = [];
+let error: string | null = null;
+
+try {
+    customers = await getCustomers();
+} catch (e) {
+    error = e instanceof Error ? e.message : "Error inesperado";
+}
+---
+
+<BaseLayout title="Clientes · ALC Cars">
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold">Clientes</h1>
+            <p class="text-slate-500 mt-1">
+                {error
+                    ? "No se pudieron cargar los clientes"
+                    : `${customers.length} cliente${customers.length === 1 ? "" : "s"}`}
+            </p>
+        </header>
+
+        {error ? (
+            <div class="alert alert-error" role="alert">
+                <span>{error}</span>
+            </div>
+        ) : customers.length === 0 ? (
+            <p class="text-slate-500 text-center py-12">
+                No hay clientes registrados.
+            </p>
+        ) : (
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th class="hidden sm:table-cell">Dirección</th>
+                            <th class="hidden md:table-cell">Fecha Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {customers.map((customer) => (
+                            <tr>
+                                <td class="font-medium">
+                                    {customer.first_name} {customer.last_name}
+                                </td>
+                                <td>{customer.email || "-"}</td>
+                                <td>{customer.phone}</td>
+                                <td class="hidden sm:table-cell">
+                                    {customer.address || "-"}
+                                </td>
+                                <td class="hidden md:table-cell">
+                                    {new Date(customer.created_at).toLocaleDateString("es-ES")}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+    </div>
+</BaseLayout>
