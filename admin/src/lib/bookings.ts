@@ -1,15 +1,85 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Car } from "@/types/car";
 import type { Booking } from "@/types/booking";
+
+export interface BookingListItem extends Booking {
+    cars: Pick<Car, "make" | "model" | "plate_number"> | null;
+}
+
+export interface BookingExtras {
+    id: string;
+    code: string;
+    name: string;
+    price: number;
+    pricing: "per_day" | "per_booking";
+}
+
+export interface BookingDetail extends Booking {
+    car: Car | null;
+    extras: BookingExtras[];
+}
+
+export async function getBookings(
+    opts: { page?: number; pageSize?: number } = {},
+): Promise<{ data: BookingListItem[]; count: number }> {
+    const page = Math.max(1, Math.floor(opts.page ?? 1));
+    const pageSize = Math.max(1, Math.floor(opts.pageSize ?? 10));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabaseAdmin
+        .from("bookings")
+        .select("*, cars(make, model, plate_number)", { count: "exact" })
+        .order("pickup_at", { ascending: false })
+        .range(from, to);
+
+    if (error) {
+        throw new Error(`Error al obtener las reservas: ${error.message}`);
+    }
+
+    return { data: (data ?? []) as BookingListItem[], count: count ?? 0 };
+}
+
+export async function getBookingById(id: string): Promise<BookingDetail | null> {
+    const { data, error } = await supabaseAdmin
+        .from("bookings")
+        .select("*, cars(*)")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(`Error al obtener la reserva: ${error.message}`);
+    }
+    if (!data) {
+        return null;
+    }
+
+    const { data: extrasData, error: extrasError } = await supabaseAdmin
+        .from("booking_extras")
+        .select("extras(id, code, name, price, pricing)")
+        .eq("booking_id", id);
+
+    if (extrasError) {
+        throw new Error(`Error al obtener los extras: ${extrasError.message}`);
+    }
+
+    const { cars, ...booking } = data;
+
+    return {
+        ...(booking as Booking),
+        car: (cars as Car) ?? null,
+        extras: (extrasData ?? []).map((row) => row.extras) as BookingExtras[],
+    };
+}
 
 export async function getBookingsInRange(
     start: string,
     end: string,
 ): Promise<Booking[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from("bookings")
         .select(
-            "id, car_id, pickup_at, dropoff_at, cancelled_at, guest_name",
+            "id, car_id, pickup_at, dropoff_at, cancelled_at, confirmed_at, guest_name",
         )
         .is("cancelled_at", null)
         .lte("pickup_at", end)
@@ -20,6 +90,45 @@ export async function getBookingsInRange(
     }
 
     return (data ?? []) as Booking[];
+}
+
+export function bookingStatus(booking: {
+    cancelled_at: string | null;
+    confirmed_at: string | null;
+    dropoff_at: string;
+}): { label: string; classes: string } {
+    if (booking.cancelled_at) {
+        return { label: "Cancelada", classes: "badge-error" };
+    }
+    if (!booking.confirmed_at) {
+        return { label: "Pendiente", classes: "badge-warning" };
+    }
+    if (new Date(booking.dropoff_at).getTime() < Date.now()) {
+        return { label: "Completada", classes: "badge-ghost" };
+    }
+    return { label: "Confirmada", classes: "badge-success" };
+}
+
+export async function confirmBooking(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+        .from("bookings")
+        .update({ confirmed_at: new Date().toISOString() })
+        .eq("id", id);
+
+    if (error) {
+        throw new Error(`Error al confirmar la reserva: ${error.message}`);
+    }
+}
+
+export async function cancelBooking(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+        .from("bookings")
+        .update({ cancelled_at: new Date().toISOString() })
+        .eq("id", id);
+
+    if (error) {
+        throw new Error(`Error al cancelar la reserva: ${error.message}`);
+    }
 }
 
 function toDateKey(dateOrIso: string | Date): string {

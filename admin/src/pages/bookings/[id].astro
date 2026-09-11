@@ -1,0 +1,328 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getBookingById, confirmBooking, cancelBooking } from "@/lib/bookings";
+import type { BookingDetail } from "@/lib/bookings";
+import { CAR_OPTIONS } from "@/types/car";
+
+const id = Astro.params.id;
+
+let booking: BookingDetail | null = null;
+let loadError: string | null = null;
+
+if (!id) {
+    loadError = "ID de reserva no válido.";
+} else {
+    try {
+        booking = await getBookingById(id);
+    } catch (e) {
+        loadError = e instanceof Error ? e.message : "Error inesperado";
+    }
+}
+
+if (Astro.request.method === "POST" && booking) {
+    const form = await Astro.request.formData();
+    const action = form.get("_action");
+
+    try {
+        if (action === "confirm") {
+            await confirmBooking(booking.id);
+        } else if (action === "cancel") {
+            await cancelBooking(booking.id);
+        }
+    } catch (e) {
+        loadError = e instanceof Error ? e.message : "Error inesperado";
+    }
+
+    return Astro.redirect(`/bookings/${booking.id}`);
+}
+
+const isPending = !!booking && !booking.confirmed_at && !booking.cancelled_at;
+const isCancelled = !!booking && !!booking.cancelled_at;
+const isCompleted =
+    !!booking &&
+    !booking.cancelled_at &&
+    new Date(booking.dropoff_at).getTime() < Date.now();
+
+const dateTime = new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "long",
+    timeStyle: "short",
+});
+
+const currency = new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+});
+
+const statusInfo = (() => {
+    if (!booking) return null;
+    if (booking.cancelled_at) {
+        return {
+            label: "Cancelada",
+            badge: "badge-error",
+            alert: "alert-error",
+            description: "Esta reserva ha sido cancelada y ya no está vigente.",
+            detail: `Cancelada el ${dateTime.format(new Date(booking.cancelled_at))}.`,
+        };
+    }
+    if (!booking.confirmed_at) {
+        return {
+            label: "Pendiente",
+            badge: "badge-warning",
+            alert: "alert-warning",
+            description: "Esta reserva está pendiente de confirmación.",
+            detail: "Revisa los datos del cliente antes de tomar una decisión.",
+        };
+    }
+    const completed = new Date(booking.dropoff_at).getTime() < Date.now();
+    return {
+        label: completed ? "Completada" : "Confirmada",
+        badge: completed ? "badge-ghost" : "badge-success",
+        alert: completed ? "alert-info" : "alert-success",
+        description: completed
+            ? "El período de alquiler de esta reserva ya ha finalizado."
+            : "Esta reserva está confirmada y vigente.",
+        detail: `Confirmada el ${dateTime.format(new Date(booking.confirmed_at))}.`,
+    };
+})();
+
+function bookingDays(pickupAt: string, dropoffAt: string): number {
+    const ms =
+        new Date(dropoffAt).getTime() - new Date(pickupAt).getTime();
+    return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+---
+
+<BaseLayout title={`Reserva${booking && booking.guest_name ? ` · ${booking.guest_name}` : ""} · ALC Cars`}>
+    <div class="flex-1 bg-base-200 p-4 sm:p-8">
+        <div class="max-w-3xl w-full mx-auto">
+            <header class="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Reserva</h1>
+                    <p class="text-slate-500 mt-1">
+                        {booking ? `Creación: ${dateTime.format(new Date(booking.created_at))}` : ""}
+                    </p>
+                </div>
+                <a href="/bookings" class="btn btn-ghost btn-sm">Volver</a>
+            </header>
+
+            {loadError && (
+                <div class="alert alert-error" role="alert">
+                    <span>{loadError}</span>
+                </div>
+            )}
+
+            {statusInfo && (
+                <>
+                    <div class={`alert ${statusInfo.alert} shadow-sm mb-6`}>
+                        <span class={`badge badge-lg ${statusInfo.badge}`}>
+                            {statusInfo.label}
+                        </span>
+                        <div class="text-sm">
+                            <p>{statusInfo.description}</p>
+                            <p class="text-xs opacity-70">{statusInfo.detail}</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-base-100 border border-base-300 shadow-sm mb-6">
+                        <div class="card-body">
+                            <h2 class="card-title text-base">Acciones</h2>
+                            {isCancelled || isCompleted ? (
+                                <p class="text-sm text-slate-500">
+                                    {isCancelled
+                                        ? "Esta reserva está cancelada y no admite más acciones."
+                                        : "El alquiler ya ha finalizado; no quedan acciones pendientes."}
+                                </p>
+                            ) : (
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    {isPending && (
+                                        <form method="post" class="flex-1">
+                                            <input type="hidden" name="_action" value="confirm" />
+                                            <button type="submit" class="btn btn-success w-full">
+                                                Confirmar reserva
+                                            </button>
+                                        </form>
+                                    )}
+                                    <button
+                                        class="btn btn-error btn-outline flex-1"
+                                        onclick="document.getElementById('cancel-modal').showModal()"
+                                    >
+                                        Cancelar reserva
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div class="grid gap-6">
+                        <div class="card bg-base-100 border border-base-300 shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title text-base">Cliente</h2>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Nombre</p>
+                                        <p class="font-medium">{booking.guest_name || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Email</p>
+                                        <p class="font-medium">{booking.guest_email || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Teléfono</p>
+                                        <p class="font-medium">{booking.guest_phone || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">DNI / NIE</p>
+                                        <p class="font-medium">{booking.guest_id_number || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Carné de conducir</p>
+                                        <p class="font-medium">{booking.guest_drivers_license || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Dirección</p>
+                                        <p class="font-medium">{booking.guest_address || "-"}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-base-100 border border-base-300 shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title text-base">Vehículo</h2>
+                                {booking.car ? (
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                        <div>
+                                            <p class="text-slate-400 text-xs">Coche</p>
+                                            <p class="font-medium">
+                                                {booking.car.make} {booking.car.model} {booking.car.model_year}
+                                                {booking.car.color ? ` · ${booking.car.color}` : ""}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p class="text-slate-400 text-xs">Matrícula</p>
+                                            <p class="font-medium">{booking.car.plate_number || "-"}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-slate-400 text-xs">Categoría</p>
+                                            <p class="font-medium">{CAR_OPTIONS.category[booking.car.category]}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-slate-400 text-xs">Transmisión / Combustible</p>
+                                            <p class="font-medium">
+                                                {CAR_OPTIONS.transmission[booking.car.transmission]} ·{" "}
+                                                {CAR_OPTIONS.fuel[booking.car.fuel]}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p class="text-slate-400 text-xs">Tarifa diaria</p>
+                                            <p class="font-medium">{currency.format(Number(booking.car.daily_rate))}</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p class="text-sm text-slate-500">Vehículo no disponible.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div class="card bg-base-100 border border-base-300 shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title text-base">Fechas</h2>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Recogida</p>
+                                        <p class="font-medium">{dateTime.format(new Date(booking.pickup_at))}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Devolución</p>
+                                        <p class="font-medium">{dateTime.format(new Date(booking.dropoff_at))}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-xs">Duración</p>
+                                        <p class="font-medium">
+                                            {bookingDays(booking.pickup_at, booking.dropoff_at)} día
+                                            {bookingDays(booking.pickup_at, booking.dropoff_at) === 1 ? "" : "s"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-base-100 border border-base-300 shadow-sm">
+                            <div class="card-body">
+                                <h2 class="card-title text-base">Precio</h2>
+                                {
+                                    (() => {
+                                        const days = bookingDays(booking.pickup_at, booking.dropoff_at);
+                                        const extras = booking.extras.map((extra) => ({
+                                            ...extra,
+                                            lineTotal:
+                                                extra.pricing === "per_day"
+                                                    ? Number(extra.price) * days
+                                                    : Number(extra.price),
+                                        }));
+                                        const extrasTotal = extras.reduce((sum, e) => sum + e.lineTotal, 0);
+                                        const total = Number(booking.price);
+                                        const base = total - extrasTotal;
+                                        return (
+                                            <div class="space-y-1 text-sm">
+                                                <div class="flex justify-between">
+                                                    <span class="text-slate-500">Alquiler del vehículo ({days} día{days === 1 ? "" : "s"})</span>
+                                                    <span class="font-medium">{currency.format(base)}</span>
+                                                </div>
+                                                {extras.map((extra) => (
+                                                    <div class="flex justify-between">
+                                                        <span class="text-slate-500">{extra.name}</span>
+                                                        <span class="font-medium">{currency.format(extra.lineTotal)}</span>
+                                                    </div>
+                                                ))}
+                                                <div class="divider my-1"></div>
+                                                <div class="flex justify-between items-center">
+                                                    <span class="font-semibold">Total</span>
+                                                    <span class="font-bold text-orange-500">{currency.format(total)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()
+                                }
+                            </div>
+                        </div>
+
+                        {booking.notes && (
+                            <div class="card bg-base-100 border border-base-300 shadow-sm">
+                                <div class="card-body">
+                                    <h2 class="card-title text-base">Notas</h2>
+                                    <p class="text-sm text-slate-600 whitespace-pre-wrap">{booking.notes}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <dialog id="cancel-modal" class="modal">
+                        <div class="modal-box">
+                            <h3 class="font-bold text-lg">Confirmar cancelación</h3>
+                            <p class="py-4">
+                                ¿Estás seguro de que quieres cancelar la reserva de{" "}
+                                <strong>{booking.guest_name || "este cliente"}</strong>
+                                {booking.car
+                                    ? <> para <strong>{booking.car.make} {booking.car.model} ({booking.car.plate_number})</strong></>
+                                    : ""}? Esta acción no se puede deshacer.
+                            </p>
+                            <div class="modal-action">
+                                <form method="dialog">
+                                    <button class="btn btn-ghost">Volver</button>
+                                </form>
+                                <form method="post">
+                                    <input type="hidden" name="_action" value="cancel" />
+                                    <button type="submit" class="btn btn-error">Sí, cancelar</button>
+                                </form>
+                            </div>
+                        </div>
+                        <form method="dialog" class="modal-backdrop">
+                            <button>close</button>
+                        </form>
+                    </dialog>
+                </>
+            )}
+        </div>
+    </div>
+</BaseLayout>

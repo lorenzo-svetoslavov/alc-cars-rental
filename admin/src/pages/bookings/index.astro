@@ -1,0 +1,156 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getBookings, bookingStatus } from "@/lib/bookings";
+
+const PAGE_SIZE = 10;
+const PAGE_NUMBERS = 5;
+
+const rawPage = Number(Astro.url.searchParams.get("page") ?? "1");
+let page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+
+let result: Awaited<ReturnType<typeof getBookings>> = { data: [], count: 0 };
+let error: string | null = null;
+
+try {
+    result = await getBookings({ page, pageSize: PAGE_SIZE });
+
+    if (result.data.length === 0 && result.count > 0) {
+        page = Math.ceil(result.count / PAGE_SIZE);
+        result = await getBookings({ page, pageSize: PAGE_SIZE });
+    }
+} catch (e) {
+    error = e instanceof Error ? e.message : "Error inesperado";
+}
+
+const bookings = result.data;
+const total = result.count;
+const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+const to = Math.min(total, page * PAGE_SIZE);
+
+interface PageLink {
+    label: number | "prev" | "next";
+    href: string;
+    active: boolean;
+}
+
+const pages: PageLink[] = [];
+if (page > 1) pages.push({ label: "prev", href: `?page=${page - 1}`, active: false });
+const start = Math.max(1, page - Math.floor(PAGE_NUMBERS / 2));
+const end = Math.min(totalPages, start + PAGE_NUMBERS - 1);
+const adjustedStart = Math.max(1, end - PAGE_NUMBERS + 1);
+for (let p = adjustedStart; p <= end; p++) {
+    pages.push({ label: p, href: `?page=${p}`, active: p === page });
+}
+if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, active: false });
+
+const currency = new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+});
+
+const dateTime = new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+});
+---
+
+<BaseLayout title="Reservas · ALC Cars">
+    <div class="flex-1 bg-base-200 p-4 sm:p-8">
+        <div class="max-w-7xl w-full mx-auto">
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold">Reservas</h1>
+                <p class="text-slate-500 mt-1">
+                    {error
+                        ? "No se pudieron cargar las reservas"
+                        : total === 0
+                          ? "No hay reservas registradas"
+                          : `Mostrando ${from}–${to} de ${total} reserva${total === 1 ? "" : "s"}`}
+                </p>
+            </header>
+
+            {error ? (
+                <div class="alert alert-error" role="alert">
+                    <span>{error}</span>
+                </div>
+            ) : bookings.length === 0 ? (
+                <p class="text-slate-500 text-center py-12">
+                    No hay reservas registradas.
+                </p>
+            ) : (
+                <>
+                    <div class="overflow-x-auto bg-base-100">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Coche</th>
+                                    <th>Recogida</th>
+                                    <th>Devolución</th>
+                                    <th>Precio</th>
+                                    <th>Estado</th>
+                                    <th class="text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {bookings.map((booking) => {
+                                    const status = bookingStatus(booking);
+                                    return (
+                                        <tr>
+                                            <td>{booking.guest_name || "-"}</td>
+                                            <td>
+                                                {booking.cars
+                                                    ? `${booking.cars.make} ${booking.cars.model} (${booking.cars.plate_number})`
+                                                    : "-"}
+                                            </td>
+                                            <td>
+                                                {dateTime.format(new Date(booking.pickup_at))}
+                                            </td>
+                                            <td>
+                                                {dateTime.format(new Date(booking.dropoff_at))}
+                                            </td>
+                                            <td>{currency.format(Number(booking.price))}</td>
+                                            <td>
+                                                <span class={`badge badge-sm ${status.classes}`}>
+                                                    {status.label}
+                                                </span>
+                                            </td>
+                                            <td class="text-right">
+                                                <a
+                                                    href={`/bookings/${booking.id}`}
+                                                    class="btn btn-ghost btn-xs"
+                                                >
+                                                    Ver
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {totalPages > 1 && (
+                        <div class="mt-6 flex items-center justify-center">
+                            <div class="join">
+                                {pages.map((link) => (
+                                    <a
+                                        href={link.href}
+                                        class:list={[
+                                            "join-item",
+                                            "btn",
+                                            "btn-sm",
+                                            link.active ? "btn-active" : "",
+                                        ]}
+                                    >
+                                        {link.label === "prev" ? "«" : link.label === "next" ? "»" : link.label}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    </div>
+</BaseLayout>
