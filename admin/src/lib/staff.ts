@@ -23,6 +23,7 @@ export async function getStaff(): Promise<StaffMember[]> {
     const { data: staffList, error } = await supabaseAdmin
         .from("staff")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
 
     if (error) {
@@ -59,6 +60,7 @@ export async function getStaffMemberById(
     const { data: member, error } = await supabaseAdmin
         .from("staff")
         .select("*")
+        .is("deleted_at", null)
         .eq("id", id)
         .maybeSingle();
 
@@ -114,6 +116,15 @@ export async function createStaffMember(input: NewStaffInput): Promise<void> {
         await supabaseAdmin.auth.admin.deleteUser(created.user.id).catch(() => {});
         throw new Error(`Error al crear el miembro del equipo: ${error.message}`);
     }
+
+    try {
+        await supabaseAdmin
+            .from("customers")
+            .delete()
+            .eq("id", created.user.id);
+    } catch {
+        // limpieza best-effort: no debe romper la creación
+    }
 }
 
 export async function updateStaffMember(
@@ -156,9 +167,15 @@ export async function setStaffMemberActive(
 }
 
 export async function deleteStaffMember(id: string): Promise<void> {
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+    const { error } = await supabaseAdmin
+        .from("staff")
+        .update({
+            deleted_at: new Date().toISOString(),
+            active: false,
+        })
+        .eq("id", id);
 
     if (error) {
-        throw new Error(`Error al eliminar el miembro del equipo: ${error.message}`);
+        throw new Error(`Error al dar de baja el miembro: ${error.message}`);
     }
 }

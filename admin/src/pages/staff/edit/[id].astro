@@ -38,7 +38,7 @@ if (Astro.request.method === "POST" && member) {
 
     if (action === "delete") {
         if (isSelf) {
-            deleteError = "No puedes eliminar tu propio usuario.";
+            deleteError = "No puedes dar de baja tu propio usuario.";
         } else {
             try {
                 await deleteStaffMember(member.id);
@@ -157,8 +157,8 @@ const v = (name: string, fallback?: string | null) =>
                         <h2 class="card-title text-error">Zona de peligro</h2>
                         <p class="text-slate-500">
                             {isSelf
-                                ? "No puedes eliminar tu propia cuenta."
-                                : "Eliminar este miembro borrará su cuenta de acceso. Se conservarán los datos de operativa existentes."}
+                                ? "No puedes dar de baja tu propia cuenta."
+                                : "Dar de baja este miembro desactivará su acceso. Se conservarán sus datos de operativa."}
                         </p>
                         <div class="card-actions justify-end">
                             <button
@@ -166,7 +166,7 @@ const v = (name: string, fallback?: string | null) =>
                                 disabled={isSelf}
                                 onclick="document.getElementById('delete-modal').showModal()"
                             >
-                                Eliminar miembro
+                                Dar de baja
                             </button>
                         </div>
                     </div>
@@ -174,12 +174,12 @@ const v = (name: string, fallback?: string | null) =>
 
                 <dialog id="delete-modal" class="modal">
                     <div class="modal-box">
-                        <h3 class="font-bold text-lg">Confirmar eliminación</h3>
+                        <h3 class="font-bold text-lg">Confirmar baja</h3>
                         <p class="py-4">
-                            ¿Estás seguro de que quieres eliminar a
+                            ¿Estás seguro de que quieres dar de baja a
                             <strong>{member.first_name} {member.last_name}</strong>
                             {member.email && <> (<strong>{member.email}</strong>)</>}?
-                            Su cuenta de acceso se eliminará de forma permanente.
+                            Perderá el acceso al panel, pero se conservarán sus datos.
                         </p>
                         <div class="modal-action">
                             <form method="dialog">
@@ -187,7 +187,7 @@ const v = (name: string, fallback?: string | null) =>
                             </form>
                             <form method="post">
                                 <input type="hidden" name="_action" value="delete" />
-                                <button type="submit" class="btn btn-error">Sí, eliminar</button>
+                                <button type="submit" class="btn btn-error">Sí, dar de baja</button>
                             </form>
                         </div>
                     </div>

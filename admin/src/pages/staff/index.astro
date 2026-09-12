@@ -30,6 +30,7 @@ if (Astro.request.method === "POST") {
         } else {
             try {
                 await setStaffMemberActive(id, active);
+                staffList = await getStaff();
             } catch (e) {
                 saveError = e instanceof Error ? e.message : "Error inesperado";
             }
