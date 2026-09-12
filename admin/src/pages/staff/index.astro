@@ -1,0 +1,170 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getStaff, setStaffMemberActive } from "@/lib/staff";
+import type { StaffMember } from "@/types/staff";
+import { hasAdminSession } from "@/lib/auth";
+
+if (!hasAdminSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
+
+let staffList: StaffMember[] = [];
+let loadError: string | null = null;
+let saveError: string | null = null;
+
+try {
+    staffList = await getStaff();
+} catch (e) {
+    loadError = e instanceof Error ? e.message : "Error inesperado";
+}
+
+if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData();
+    const id = (form.get("id") ?? "").toString();
+    const action = (form.get("_action") ?? "").toString();
+
+    if (id && (action === "activate" || action === "deactivate")) {
+        const active = action === "activate";
+        if (Astro.locals.user?.id === id && !active) {
+            saveError = "No puedes desactivar tu propio usuario.";
+        } else {
+            try {
+                await setStaffMemberActive(id, active);
+            } catch (e) {
+                saveError = e instanceof Error ? e.message : "Error inesperado";
+            }
+        }
+    }
+}
+
+if (saveError || loadError) {
+    try {
+        staffList = await getStaff();
+    } catch {
+        /** ignore */
+    }
+}
+
+const roleLabel: Record<string, string> = {
+    admin: "Admin",
+    worker: "Trabajador",
+};
+---
+
+<BaseLayout title="Staff · ALC Cars">
+    <div class="flex-1 bg-base-200 p-4 sm:p-8">
+        <div class="max-w-7xl w-full mx-auto">
+            <header class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">Equipo</h1>
+                    <p class="text-slate-500 mt-1">
+                        {loadError
+                            ? "No se pudo cargar el personal"
+                            : "Administradores y trabajadores del negocio"}
+                    </p>
+                </div>
+                <a href="/staff/new" class="btn btn-success gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Nuevo miembro
+                </a>
+            </header>
+
+            {saveError && (
+                <div class="alert alert-error mb-6" role="alert">
+                    <span>{saveError}</span>
+                </div>
+            )}
+
+            {loadError ? (
+                <div class="alert alert-error" role="alert">
+                    <span>{loadError}</span>
+                </div>
+            ) : staffList.length === 0 ? (
+                <p class="text-slate-500 text-center py-12">
+                    No hay miembros del equipo. Crea el primer miembro.
+                </p>
+            ) : (
+                <div class="overflow-x-auto bg-base-100">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th class="text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {staffList.map((member) => {
+                                const isSelf = member.id === Astro.locals.user?.id;
+                                return (
+                                    <tr>
+                                        <td>
+                                            {member.first_name} {member.last_name}
+                                            {isSelf && (
+                                                <span class="badge badge-ghost badge-sm ml-2">tú</span>
+                                            )}
+                                        </td>
+                                        <td>{member.email || "-"}</td>
+                                        <td>
+                                            <span class:list={[
+                                                "badge badge-sm",
+                                                member.role === "admin"
+                                                    ? "badge-primary"
+                                                    : "badge-neutral",
+                                            ]}>
+                                                {roleLabel[member.role] ?? member.role}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {member.active ? (
+                                                <span class="badge badge-success badge-sm">Activo</span>
+                                            ) : (
+                                                <span class="badge badge-error badge-sm">Inactivo</span>
+                                            )}
+                                        </td>
+                                        <td class="text-right">
+                                            <div class="flex justify-end gap-2">
+                                                <a
+                                                    href={`/staff/edit/${member.id}`}
+                                                    class="btn btn-warning btn-sm gap-1"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                                    </svg>
+                                                    Editar
+                                                </a>
+                                                {!isSelf && (
+                                                    <form method="post">
+                                                        <input type="hidden" name="id" value={member.id} />
+                                                        <input
+                                                            type="hidden"
+                                                            name="_action"
+                                                            value={member.active ? "deactivate" : "activate"}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            class:list={[
+                                                                "btn btn-sm",
+                                                                member.active ? "btn-error btn-outline" : "btn-success",
+                                                            ]}
+                                                        >
+                                                            {member.active ? "Desactivar" : "Activar"}
+                                                        </button>
+                                                    </form>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    </div>
+</BaseLayout>

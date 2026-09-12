@@ -1,0 +1,115 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { createStaffMember } from "@/lib/staff";
+import type { StaffRole } from "@/types/staff";
+import { hasAdminSession } from "@/lib/auth";
+
+if (!hasAdminSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
+
+let saveError: string | null = null;
+let formData: Record<string, string> = {};
+
+if (Astro.request.method === "POST") {
+    const form = await Astro.request.formData();
+    formData = Object.fromEntries(form.entries()) as Record<string, string>;
+
+    const email = (form.get("email") ?? "").toString().trim();
+    const password = (form.get("password") ?? "").toString();
+    const first_name = (form.get("first_name") ?? "").toString().trim();
+    const last_name = (form.get("last_name") ?? "").toString().trim();
+    const role = (form.get("role") ?? "").toString() as StaffRole;
+
+    if (!email) {
+        saveError = "El email es obligatorio.";
+    } else if (!password || password.length < 6) {
+        saveError = "La contraseña debe tener al menos 6 caracteres.";
+    } else if (!first_name) {
+        saveError = "El nombre es obligatorio.";
+    } else if (!last_name) {
+        saveError = "Los apellidos son obligatorios.";
+    } else if (role !== "admin" && role !== "worker") {
+        saveError = "El rol no es válido.";
+    } else {
+        try {
+            await createStaffMember({
+                email,
+                password,
+                first_name,
+                last_name,
+                role,
+            });
+            return Astro.redirect("/staff");
+        } catch (e) {
+            saveError = e instanceof Error ? e.message : "Error inesperado";
+        }
+    }
+}
+
+const v = (name: string, fallback?: string) =>
+    formData[name] ?? (fallback ?? "");
+---
+
+<BaseLayout title="Nuevo miembro · ALC Cars">
+    <div class="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-12">
+        <header class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold">Nuevo miembro del equipo</h1>
+                <p class="text-slate-500 mt-1">
+                    Se creará una cuenta de acceso al panel para esta persona.
+                </p>
+            </div>
+            <a href="/staff" class="btn btn-ghost btn-sm">Volver</a>
+        </header>
+
+        {saveError && (
+            <div class="alert alert-error mb-6" role="alert">
+                <span>{saveError}</span>
+            </div>
+        )}
+
+        <form method="post" class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card-body gap-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="form-control">
+                        <span class="label">Nombre *</span>
+                        <input class="input input-bordered" type="text" name="first_name"
+                            value={v("first_name")} required />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Apellidos *</span>
+                        <input class="input input-bordered" type="text" name="last_name"
+                            value={v("last_name")} required />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Email *</span>
+                        <input class="input input-bordered" type="email" name="email"
+                            value={v("email")} required />
+                    </label>
+                    <label class="form-control">
+                        <span class="label">Contraseña *</span>
+                        <input class="input input-bordered" type="password" name="password"
+                            minlength="6" required />
+                    </label>
+                    <div class="form-control">
+                        <span class="label">Rol *</span>
+                        <select class="select select-bordered" name="role" required>
+                            <option value="worker" selected={v("role") === "worker"}>
+                                Trabajador
+                            </option>
+                            <option value="admin" selected={v("role") === "admin"}>
+                                Admin
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-2">
+                    <a href="/staff" class="btn btn-ghost">Cancelar</a>
+                    <button type="submit" class="btn btn-success">Crear miembro</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</BaseLayout>

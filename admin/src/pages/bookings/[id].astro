@@ -3,6 +3,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getBookingById, confirmBooking, cancelBooking } from "@/lib/bookings";
 import type { BookingDetail } from "@/lib/bookings";
 import { CAR_OPTIONS } from "@/types/car";
+import { hasStaffSession } from "@/lib/auth";
+
+if (!hasStaffSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
 
 const id = Astro.params.id;
 

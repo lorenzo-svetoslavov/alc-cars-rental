@@ -2,6 +2,11 @@
 import CarCard from "@/components/cars/CarCard.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getCars } from "@/lib/cars";
+import { hasAdminSession } from "@/lib/auth";
+
+if (!hasAdminSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
 
 let cars: Awaited<ReturnType<typeof getCars>> = [];
 let error: string | null = null;

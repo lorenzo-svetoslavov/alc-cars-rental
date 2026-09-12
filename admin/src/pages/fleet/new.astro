@@ -3,6 +3,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { createCar } from "@/lib/cars";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { CAR_OPTIONS } from "@/types/car";
+import { hasAdminSession } from "@/lib/auth";
+
+if (!hasAdminSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
 
 let saveError: string | null = null;
 let formData: Record<string, string> = {};

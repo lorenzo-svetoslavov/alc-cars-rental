@@ -1,15 +1,198 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getDailySummary, toDateKey } from "@/lib/bookings";
+import type { DailySummary } from "@/lib/bookings";
+
+const todayStr = toDateKey(new Date());
+const selectedDate = Astro.url.searchParams.get("date") ?? todayStr;
+
+let summary: DailySummary | null = null;
+let error: string | null = null;
+
+try {
+    summary = await getDailySummary(selectedDate);
+} catch (e) {
+    error = e instanceof Error ? e.message : "Error inesperado";
+}
+
+const isSelectedToday = selectedDate === todayStr;
+
+const dateTime = new Intl.DateTimeFormat("es-ES", {
+    timeStyle: "short",
+    timeZone: "Europe/Madrid",
+});
+
+const dateDisplay = new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "long",
+    timeZone: "Europe/Madrid",
+});
+
+function formatSelectedDate(d: string): string {
+    return dateDisplay.format(new Date(d + "T12:00:00"));
+}
 ---
 
-<BaseLayout title="Admin · ALC Cars">
-    <div class="flex-1 flex items-center justify-center">
-        <div class="text-center space-y-6">
-            <h1 class="text-4xl font-bold">ALC Cars Admin</h1>
-            <p class="text-slate-500">Panel de administración</p>
-            <a href="/fleet" class="btn btn-primary btn-lg">
-                Ver Flota
-            </a>
+<BaseLayout title="Panel · ALC Cars">
+    <div class="flex-1 bg-base-200 p-4 sm:p-8">
+        <div class="max-w-6xl w-full mx-auto">
+            <header class="mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold">Panel</h1>
+                        <p class="text-slate-500 mt-1">
+                            Resumen de entradas y salidas
+                        </p>
+                    </div>
+                    <form method="get" class="flex items-center gap-2">
+                        <label class="text-sm text-slate-500 whitespace-nowrap hidden sm:inline">Fecha:</label>
+                        <input
+                            type="date"
+                            name="date"
+                            value={selectedDate}
+                            class="input input-bordered input-sm w-full sm:w-auto"
+                            onchange="this.closest('form').submit()"
+                        />
+                    </form>
+                </div>
+                {!isSelectedToday && (
+                    <p class="text-sm text-slate-400 mt-2">
+                        Viendo: {formatSelectedDate(selectedDate)}
+                    </p>
+                )}
+            </header>
+
+            {error ? (
+                <div class="alert alert-error" role="alert">
+                    <span>{error}</span>
+                </div>
+            ) : summary && (
+                <>
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+                        <div class="card bg-success/10 border border-success/30">
+                            <div class="card-body p-4 sm:p-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="text-3xl sm:text-4xl font-bold text-success">
+                                        {summary.salidas.length}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm sm:text-base font-semibold">Salidas</p>
+                                        <p class="text-xs text-slate-500">Coches que salen</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-warning/10 border border-warning/30">
+                            <div class="card-body p-4 sm:p-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="text-3xl sm:text-4xl font-bold text-warning">
+                                        {summary.entradas.length}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm sm:text-base font-semibold">Entradas</p>
+                                        <p class="text-xs text-slate-500">Coches que llegan</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section class="mb-8">
+                        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <span class="badge badge-success badge-sm">●</span>
+                            Salidas — {summary.salidas.length === 0 ? "Ninguna" : `${summary.salidas.length} reserva${summary.salidas.length !== 1 ? "s" : ""}`}
+                        </h2>
+                        {summary.salidas.length === 0 ? (
+                            <div class="card bg-base-100 border border-base-300">
+                                <div class="card-body p-6">
+                                    <p class="text-slate-400 text-center text-sm">No hay salidas programadas para este día.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {summary.salidas.map((b) => {
+                                    return (
+                                        <a href={`/bookings/${b.id}`} class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
+                                            <div class="card-body p-4">
+                                                <div class="flex items-start justify-between gap-2">
+                                                    <div class="min-w-0">
+                                                        <p class="font-semibold truncate">
+                                                            {b.guest_name || "Sin nombre"}
+                                                        </p>
+                                                        <p class="text-sm text-slate-500 truncate">
+                                                            {b.cars
+                                                                ? `${b.cars.make} ${b.cars.model}`
+                                                                : "Coche no asignado"}
+                                                        </p>
+                                                        {b.cars && (
+                                                            <p class="text-xs text-slate-400 mt-0.5">
+                                                                {b.cars.plate_number}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    
+                                                </div>
+                                                <div class="divider my-1"></div>
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <span class="text-slate-500">Recogida</span>
+                                                    <span class="font-medium">{dateTime.format(new Date(b.pickup_at))}</span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+
+                    <section>
+                        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <span class="badge badge-warning badge-sm">●</span>
+                            Entradas — {summary.entradas.length === 0 ? "Ninguna" : `${summary.entradas.length} reserva${summary.entradas.length !== 1 ? "s" : ""}`}
+                        </h2>
+                        {summary.entradas.length === 0 ? (
+                            <div class="card bg-base-100 border border-base-300">
+                                <div class="card-body p-6">
+                                    <p class="text-slate-400 text-center text-sm">No hay entradas programadas para este día.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {summary.entradas.map((b) => {
+                                    return (
+                                        <a href={`/bookings/${b.id}`} class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
+                                            <div class="card-body p-4">
+                                                <div class="flex items-start justify-between gap-2">
+                                                    <div class="min-w-0">
+                                                        <p class="font-semibold truncate">
+                                                            {b.guest_name || "Sin nombre"}
+                                                        </p>
+                                                        <p class="text-sm text-slate-500 truncate">
+                                                            {b.cars
+                                                                ? `${b.cars.make} ${b.cars.model}`
+                                                                : "Coche no asignado"}
+                                                        </p>
+                                                        {b.cars && (
+                                                            <p class="text-xs text-slate-400 mt-0.5">
+                                                                {b.cars.plate_number}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    
+                                                </div>
+                                                <div class="divider my-1"></div>
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <span class="text-slate-500">Devolución</span>
+                                                    <span class="font-medium">{dateTime.format(new Date(b.dropoff_at))}</span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+                </>
+            )}
         </div>
     </div>
 </BaseLayout>

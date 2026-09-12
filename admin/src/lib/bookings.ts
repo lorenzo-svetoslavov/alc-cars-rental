@@ -72,6 +72,94 @@ export async function getBookingById(id: string): Promise<BookingDetail | null> 
     };
 }
 
+export interface DailySummary {
+    date: string;
+    salidas: BookingListItem[];
+    entradas: BookingListItem[];
+}
+
+const APP_TIME_ZONE = "Europe/Madrid";
+
+const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+});
+
+export function toDateKey(dateOrIso: string | Date): string {
+    const d = typeof dateOrIso === "string" ? new Date(dateOrIso) : dateOrIso;
+    return dateKeyFormatter.format(d);
+}
+
+function madridOffsetMs(dateStr: string): number {
+    const probe = new Date(`${dateStr}T00:00:00.000Z`);
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: APP_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(probe);
+    const map: Record<string, number> = {};
+    for (const p of parts) {
+        if (p.type !== "literal") map[p.type] = Number(p.value);
+    }
+    const wallClockAsUtc = Date.UTC(
+        map.year,
+        map.month - 1,
+        map.day,
+        map.hour,
+        map.minute,
+        map.second,
+    );
+    return wallClockAsUtc - probe.getTime();
+}
+
+function madridDayStartUtc(dateStr: string): number {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return Date.UTC(y, m - 1, d, 0, 0, 0) - madridOffsetMs(dateStr);
+}
+
+function nextDateStr(dateStr: string): string {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return toDateKey(new Date(Date.UTC(y, m - 1, d + 1, 12)));
+}
+
+export async function getDailySummary(dateStr: string): Promise<DailySummary> {
+    const startISO = new Date(madridDayStartUtc(dateStr)).toISOString();
+    const endISO = new Date(
+        madridDayStartUtc(nextDateStr(dateStr)),
+    ).toISOString();
+
+    const { data, error } = await supabaseAdmin
+        .from("bookings")
+        .select("*, cars(make, model, plate_number)")
+        .not("confirmed_at", "is", null)
+        .is("cancelled_at", null)
+        .or(
+            `and(pickup_at.gte.${startISO},pickup_at.lt.${endISO}),and(dropoff_at.gte.${startISO},dropoff_at.lt.${endISO})`,
+        )
+        .order("pickup_at", { ascending: true });
+
+    if (error) {
+        throw new Error(
+            `Error al obtener el resumen diario: ${error.message}`,
+        );
+    }
+
+    const rows = (data ?? []) as BookingListItem[];
+    const key = dateStr;
+
+    const salidas = rows.filter((b) => toDateKey(b.pickup_at) === key);
+    const entradas = rows.filter((b) => toDateKey(b.dropoff_at) === key);
+
+    return { date: dateStr, salidas, entradas };
+}
+
 export async function getBookingsInRange(
     start: string,
     end: string,
@@ -129,14 +217,6 @@ export async function cancelBooking(id: string): Promise<void> {
     if (error) {
         throw new Error(`Error al cancelar la reserva: ${error.message}`);
     }
-}
-
-function toDateKey(dateOrIso: string | Date): string {
-    const d = typeof dateOrIso === "string" ? new Date(dateOrIso) : dateOrIso;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
 }
 
 function addDays(start: Date, days: number): string {

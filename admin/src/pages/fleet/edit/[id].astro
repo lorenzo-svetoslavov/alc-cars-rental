@@ -2,6 +2,11 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { getCarById, updateCar, deleteCar } from "@/lib/cars";
 import { CAR_OPTIONS, type Car } from "@/types/car";
+import { hasAdminSession } from "@/lib/auth";
+
+if (!hasAdminSession(Astro.locals)) {
+    return Astro.redirect("/login");
+}
 
 const id = Astro.params.id;
 
