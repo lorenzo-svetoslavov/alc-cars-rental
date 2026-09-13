@@ -1,0 +1,64 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="Fuel Policy · ALC Cars">
+	<Header />
+
+	<main class="flex-1 bg-orange-50 px-4 py-12">
+		<article class="mx-auto max-w-3xl card bg-white shadow-xl p-8 sm:p-10 space-y-10">
+			<header class="space-y-2">
+				<h1 class="text-3xl font-bold">Fuel Policy</h1>
+				<p class="text-sm text-slate-500">Last updated: September 2026</p>
+			</header>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">Full tank to full tank</h2>
+				<p class="text-slate-600 leading-relaxed">
+					All our vehicles are delivered with a full tank of fuel and must be
+					returned with a full tank. This policy is the most transparent: you
+					only pay for the fuel you actually use during your rental.
+				</p>
+				<p class="text-slate-600 leading-relaxed">
+					The nearest fuel station is just minutes from our return office at
+					Alicante-Elche Airport (ALC). We recommend refueling before returning
+					the vehicle and keeping the receipt from the station.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">What happens if I don't return the tank full?</h2>
+				<p class="text-slate-600 leading-relaxed">
+					If the vehicle is not returned with a full tank, a refueling charge
+					plus the cost of the missing fuel, calculated at the average market
+					price, will apply. The amount will be charged to the card provided at
+					pickup.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">Tips before returning the vehicle</h2>
+				<ul class="list-disc list-inside text-slate-600 leading-relaxed space-y-1">
+					<li>Refuel at a station near the office before you arrive.</li>
+					<li>Confirm that the tank is full when returning the vehicle.</li>
+					<li>
+						For diesel or electric vehicles, check the label on the fuel filler
+						to use the correct fuel.
+					</li>
+				</ul>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">Questions</h2>
+				<p class="text-slate-600 leading-relaxed">
+					If you have any questions about this policy, contact us on +34 965 123
+					456. We are available from 06:00 to 23:55, every day.
+				</p>
+			</section>
+		</article>
+	</main>
+
+	<Footer />
+</BaseLayout>

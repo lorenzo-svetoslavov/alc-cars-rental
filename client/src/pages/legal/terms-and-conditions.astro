@@ -1,0 +1,125 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+---
+
+<BaseLayout title="Terms & Conditions · ALC Cars">
+	<Header />
+
+	<main class="flex-1 bg-orange-50 px-4 py-12">
+		<article class="mx-auto max-w-3xl card bg-white shadow-xl p-8 sm:p-10 space-y-10">
+			<header class="space-y-2">
+				<h1 class="text-3xl font-bold">Terms & Conditions of Car Rental</h1>
+				<p class="text-sm text-slate-500">Last updated: September 2026</p>
+			</header>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">1. Purpose of the agreement</h2>
+				<p class="text-slate-600 leading-relaxed">
+					ALC Cars rents vehicles to drivers who meet the requirements set out
+					in these terms. By confirming a booking, the customer accepts these
+					terms and conditions in full, together with the fuel policy and any
+					other specific conditions applicable to the booking.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">2. Driver requirements</h2>
+				<ul class="list-disc list-inside text-slate-600 leading-relaxed space-y-1">
+					<li>A minimum age of 21 years.</li>
+					<li>A valid driving license held for at least 1 year.</li>
+					<li>
+						An International Driving Permit (IDP) for drivers whose license was
+						not issued in the European Union or in a country with a valid
+						reciprocity agreement.
+					</li>
+					<li>
+						Drivers under 25 may be subject to a young driver surcharge
+						depending on the vehicle category.
+					</li>
+				</ul>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">3. Required documentation</h2>
+				<p class="text-slate-600 leading-relaxed">
+					At pickup, the main driver must present a valid driving license, a
+					national ID or passport and, where applicable, the credit card
+					associated with the booking. Failure to provide valid documentation
+					will prevent delivery of the vehicle with no right to a refund.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">4. Bookings and payment</h2>
+				<p class="text-slate-600 leading-relaxed">
+					The booking is confirmed when the booking process is completed on the
+					website. The final price corresponds to the result of the booking
+					process for the selected dates and vehicle. Any additional charges
+					(surcharges, refueling, damage, fines) will be charged to the card
+					provided at pickup.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">5. Pickup and return</h2>
+				<p class="text-slate-600 leading-relaxed">
+					Pickup takes place at the ALC Cars office at Alicante-Elche Airport
+					(ALC) within the hours indicated on the booking. The vehicle must be
+					returned to the same office, within the contracted period and in the
+					same condition in which it was delivered, apart from normal wear and
+					tear. Late returns may incur additional charges.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">6. Cancellations</h2>
+				<p class="text-slate-600 leading-relaxed">
+					Free cancellations are available according to the conditions shown at
+					the time of booking. To cancel or amend a booking, contact us on +34
+					965 123 456.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">7. Fuel and mileage</h2>
+				<p class="text-slate-600 leading-relaxed">
+					We apply a full-to-full fuel policy. All vehicles include unlimited
+					mileage. See the
+					<a href="/legal/fuel-policy" class="text-orange-600 hover:underline">fuel policy</a>
+					for more detail.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">8. Insurance</h2>
+				<p class="text-slate-600 leading-relaxed">
+					All rentals include basic liability insurance. The customer may
+					purchase optional cover to reduce or eliminate the excess. The vehicle
+					must be returned undamaged; otherwise, the repair cost will be charged.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">9. Incidents and fines</h2>
+				<p class="text-slate-600 leading-relaxed">
+					The customer is responsible for the vehicle during the rental period.
+					Fines, penalties and management charges arising from traffic offenses
+					or the loss of documentation during the rental will be charged to the
+					customer.
+				</p>
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-xl font-semibold">10. Governing law</h2>
+				<p class="text-slate-600 leading-relaxed">
+					These terms are governed by Spanish law. For any dispute, the parties
+					submit to the courts and tribunals of the city of Alicante.
+				</p>
+			</section>
+		</article>
+	</main>
+
+	<Footer />
+</BaseLayout>
