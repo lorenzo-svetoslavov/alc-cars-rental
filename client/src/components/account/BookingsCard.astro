@@ -101,6 +101,8 @@
 				return;
 			}
 
+			this.userId = session.user.id;
+
 			await this.fetchBookings();
 
 			supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -118,6 +120,7 @@
 			const { data, error } = await supabase
 				.from("bookings")
 				.select("*, cars(make, model, model_year, color)")
+				.eq("customer_id", this.userId)
 				.order("pickup_at", { ascending: false });
 
 			if (error) {
