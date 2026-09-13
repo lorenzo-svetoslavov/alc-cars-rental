@@ -22,20 +22,9 @@ export const CAR_OPTIONS = {
     },
 } as const;
 
-export type CarOptionGroup = keyof typeof CAR_OPTIONS;
 export type Transmission = keyof typeof CAR_OPTIONS.transmission;
 export type FuelType = keyof typeof CAR_OPTIONS.fuel;
 export type CarCategory = keyof typeof CAR_OPTIONS.category;
-
-/** Options of a group, ready to render a <select>: [{ value, label }, ...] */
-export function carOptions(group: CarOptionGroup) {
-    return Object.entries(CAR_OPTIONS[group]).map(([value, label]) => ({ value, label }));
-}
-
-/** Values of a group, e.g. ["manual", "automatic"] for transmission */
-export function carOptionValues(group: CarOptionGroup) {
-    return Object.keys(CAR_OPTIONS[group]);
-}
 
 /**
  * Fila completa de `cars`, tal cual está en la base de datos.
