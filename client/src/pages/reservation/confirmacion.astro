@@ -458,49 +458,32 @@ const total = carTotal + extrasTotal;
 
                 const { data: { session } } = await supabase.auth.getSession();
 
-                const bookingPayload: Record<string, unknown> = {
-                    car_id: carId,
-                    pickup_at: pickupISO,
-                    dropoff_at: returnISO,
-                    price: total,
-                    guest_name: this.form.guest_name.trim(),
-                    guest_email: this.form.guest_email || "",
-                    guest_phone: this.form.guest_phone || "",
-                    guest_id_number: this.form.guest_id_number || "",
-                    guest_drivers_license: this.form.guest_drivers_license || "",
-                    guest_address: this.form.guest_address || "",
-                };
+                const extraIds = extrasData.map((e) => e.id);
 
-                if (session) {
-                    bookingPayload.customer_id = session.user.id;
-                }
-
-                const { data: booking, error: insertError } = await supabase
-                    .from("bookings")
-                    .insert(bookingPayload)
-                    .select()
-                    .single();
+                const { data: booking, error: insertError } = await supabase.rpc("create_booking", {
+                    p_car_id: carId,
+                    p_pickup_at: pickupISO,
+                    p_dropoff_at: returnISO,
+                    p_guest_name: this.form.guest_name.trim(),
+                    p_guest_email: this.form.guest_email || null,
+                    p_guest_phone: this.form.guest_phone || null,
+                    p_guest_id_number: this.form.guest_id_number || null,
+                    p_guest_drivers_license: this.form.guest_drivers_license || null,
+                    p_guest_address: this.form.guest_address || null,
+                    p_price: total,
+                    p_customer_id: session?.user.id ?? null,
+                    p_extras: extraIds.length > 0 ? extraIds : null,
+                });
 
                 if (insertError) {
                     console.error("Booking insert error:", insertError);
-                    this.error = `Failed to create reservation: ${insertError.message}`;
+                    if (insertError.message.includes("ya no está disponible para esas fechas")) {
+                        this.error = "Este vehículo ya no está disponible para esas fechas. Elige otras fechas o un coche distinto.";
+                    } else {
+                        this.error = `Failed to create reservation: ${insertError.message}`;
+                    }
                     this.submitting = false;
                     return;
-                }
-
-                if (extrasData.length > 0) {
-                    const bookingExtras = extrasData.map((e) => ({
-                        booking_id: booking.id,
-                        extra_id: e.id,
-                    }));
-
-                    const { error: extrasError } = await supabase
-                        .from("booking_extras")
-                        .insert(bookingExtras);
-
-                    if (extrasError) {
-                        console.error("Extras insert error:", extrasError);
-                    }
                 }
 
                 this.booking = booking;
