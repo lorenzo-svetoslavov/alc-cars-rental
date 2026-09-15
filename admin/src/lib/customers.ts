@@ -8,6 +8,8 @@ export type CustomerUpdate = Partial<
 export interface GetCustomersOptions {
     page?: number;
     pageSize?: number;
+    search?: string;
+    blacklist?: "active" | "blacklisted";
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
@@ -53,6 +55,34 @@ export async function updateCustomer(
     }
 }
 
+export async function blacklistCustomer(id: string, reason: string): Promise<void> {
+    const { error } = await supabaseAdmin
+        .from("customers")
+        .update({
+            blacklisted_at: new Date().toISOString(),
+            blacklist_reason: reason,
+        })
+        .eq("id", id);
+
+    if (error) {
+        throw new Error(`Error al poner en blacklist el cliente: ${error.message}`);
+    }
+}
+
+export async function unblacklistCustomer(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+        .from("customers")
+        .update({
+            blacklisted_at: null,
+            blacklist_reason: null,
+        })
+        .eq("id", id);
+
+    if (error) {
+        throw new Error(`Error al quitar de blacklist el cliente: ${error.message}`);
+    }
+}
+
 export async function deleteCustomer(id: string): Promise<void> {
     const { error } = await supabaseAdmin
         .from("customers")
@@ -72,10 +102,26 @@ export async function getCustomers(
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data: customers, error: customersError, count } = await supabaseAdmin
+    let query = supabaseAdmin
         .from("customers")
         .select("*", { count: "exact" })
-        .is("deleted_at", null)
+        .is("deleted_at", null);
+
+    const search = opts.search?.trim();
+    if (search) {
+        const pattern = `*${search}*`;
+        query = query.or(
+            `first_name.ilike.${pattern},last_name.ilike.${pattern},phone.ilike.${pattern},id_number.ilike.${pattern},drivers_license.ilike.${pattern},address.ilike.${pattern}`,
+        );
+    }
+
+    if (opts.blacklist === "active") {
+        query = query.is("blacklisted_at", null);
+    } else if (opts.blacklist === "blacklisted") {
+        query = query.not("blacklisted_at", "is", null);
+    }
+
+    const { data: customers, error: customersError, count } = await query
         .range(from, to)
         .order("first_name", { ascending: true });
 

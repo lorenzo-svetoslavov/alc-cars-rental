@@ -9,5 +9,7 @@ export interface Customer {
     created_at: string;
     updated_at: string;
     deleted_at?: string | null;
+    blacklisted_at?: string | null;
+    blacklist_reason?: string | null;
     email?: string;
 }

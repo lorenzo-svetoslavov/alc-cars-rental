@@ -1,9 +1,16 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Car } from "@/types/car";
+import type { Customer } from "@/types/customer";
 import type { Booking } from "@/types/booking";
 
 export interface BookingListItem extends Booking {
     cars: Pick<Car, "make" | "model" | "plate_number"> | null;
+    customers?: Pick<Customer, "blacklisted_at" | "blacklist_reason"> | null;
+}
+
+export interface CustomerBlacklistInfo {
+    blacklisted_at: string | null;
+    blacklist_reason: string | null;
 }
 
 export interface BookingExtras {
@@ -17,19 +24,116 @@ export interface BookingExtras {
 export interface BookingDetail extends Booking {
     car: Car | null;
     extras: BookingExtras[];
+    customers?: Pick<Customer, "blacklisted_at" | "blacklist_reason"> | null;
+}
+
+export interface GetBookingsOptions {
+    page?: number;
+    pageSize?: number;
+    guest_name?: string;
+    guest_phone?: string;
+    car_make?: string;
+    car_model?: string;
+    plate_number?: string;
+    status?: "pending" | "confirmed" | "completed" | "cancelled";
+}
+
+export async function attachCustomerBlacklist<T extends { customer_id: string | null }>(
+    rows: T[],
+): Promise<Array<T & { customers: CustomerBlacklistInfo | null }>> {
+    const ids = [
+        ...new Set(
+            rows
+                .map((row) => row.customer_id)
+                .filter((id): id is string => !!id),
+        ),
+    ];
+
+    if (ids.length === 0) {
+        return rows.map((row) => ({ ...row, customers: null }));
+    }
+
+    const { data, error } = await supabaseAdmin
+        .from("customers")
+        .select("id, blacklisted_at, blacklist_reason")
+        .in("id", ids);
+
+    if (error) {
+        throw new Error(
+            `Error al obtener la información de blacklist: ${error.message}`,
+        );
+    }
+
+    const blacklistMap = new Map<string, CustomerBlacklistInfo>();
+    for (const customer of data ?? []) {
+        blacklistMap.set(customer.id, {
+            blacklisted_at: customer.blacklisted_at,
+            blacklist_reason: customer.blacklist_reason,
+        });
+    }
+
+    return rows.map((row) => ({
+        ...row,
+        customers: row.customer_id
+            ? (blacklistMap.get(row.customer_id) ?? null)
+            : null,
+    }));
 }
 
 export async function getBookings(
-    opts: { page?: number; pageSize?: number } = {},
+    opts: GetBookingsOptions = {},
 ): Promise<{ data: BookingListItem[]; count: number }> {
     const page = Math.max(1, Math.floor(opts.page ?? 1));
     const pageSize = Math.max(1, Math.floor(opts.pageSize ?? 10));
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await supabaseAdmin
+    let query = supabaseAdmin
         .from("bookings")
-        .select("*, cars(make, model, plate_number)", { count: "exact" })
+        .select("*, cars(make, model, plate_number)", { count: "exact" });
+
+    const ilike = (val: string) => `*${val.trim()}*`;
+
+    if (opts.guest_name?.trim()) {
+        query = query.ilike("guest_name", ilike(opts.guest_name));
+    }
+    if (opts.guest_phone?.trim()) {
+        query = query.ilike("guest_phone", ilike(opts.guest_phone));
+    }
+    if (opts.car_make?.trim()) {
+        query = query.ilike("cars.make", ilike(opts.car_make));
+    }
+    if (opts.car_model?.trim()) {
+        query = query.ilike("cars.model", ilike(opts.car_model));
+    }
+    if (opts.plate_number?.trim()) {
+        query = query.ilike("cars.plate_number", ilike(opts.plate_number));
+    }
+
+    if (opts.status) {
+        switch (opts.status) {
+            case "cancelled":
+                query = query.not("cancelled_at", "is", null);
+                break;
+            case "pending":
+                query = query.is("confirmed_at", null).is("cancelled_at", null);
+                break;
+            case "confirmed":
+                query = query
+                    .not("confirmed_at", "is", null)
+                    .is("cancelled_at", null)
+                    .gte("dropoff_at", new Date().toISOString());
+                break;
+            case "completed":
+                query = query
+                    .not("confirmed_at", "is", null)
+                    .is("cancelled_at", null)
+                    .lt("dropoff_at", new Date().toISOString());
+                break;
+        }
+    }
+
+    const { data, error, count } = await query
         .order("pickup_at", { ascending: false })
         .range(from, to);
 
@@ -37,7 +141,18 @@ export async function getBookings(
         throw new Error(`Error al obtener las reservas: ${error.message}`);
     }
 
-    return { data: (data ?? []) as BookingListItem[], count: count ?? 0 };
+    if ((data ?? []).length === 0) {
+        return { data: [], count: count ?? 0 };
+    }
+
+    const withBlacklist = await attachCustomerBlacklist(
+        data as Array<Booking & { cars: BookingListItem["cars"] }>,
+    );
+
+    return {
+        data: withBlacklist as BookingListItem[],
+        count: count ?? 0,
+    };
 }
 
 export async function getBookingById(id: string): Promise<BookingDetail | null> {
@@ -65,9 +180,12 @@ export async function getBookingById(id: string): Promise<BookingDetail | null> 
 
     const { cars, ...booking } = data;
 
+    const [customerRow] = await attachCustomerBlacklist([booking as Booking]);
+
     return {
         ...(booking as Booking),
         car: (cars as Car) ?? null,
+        customers: customerRow.customers,
         extras: (extrasData ?? []).map((row) => row.extras) as BookingExtras[],
     };
 }

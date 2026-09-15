@@ -13,15 +13,19 @@ const PAGE_NUMBERS = 5;
 const rawPage = Number(Astro.url.searchParams.get("page") ?? "1");
 let page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
+const search = Astro.url.searchParams.get("q")?.trim() ?? "";
+const blacklistFilter = Astro.url.searchParams.get("blacklist") ?? "";
+const hasFilters = search !== "" || blacklistFilter !== "";
+
 let result: Awaited<ReturnType<typeof getCustomers>> = { data: [], count: 0 };
 let error: string | null = null;
 
 try {
-    result = await getCustomers({ page, pageSize: PAGE_SIZE });
+    result = await getCustomers({ page, pageSize: PAGE_SIZE, search, blacklist: blacklistFilter as "active" | "blacklisted" | undefined });
 
     if (result.data.length === 0 && result.count > 0) {
         page = Math.ceil(result.count / PAGE_SIZE);
-        result = await getCustomers({ page, pageSize: PAGE_SIZE });
+        result = await getCustomers({ page, pageSize: PAGE_SIZE, search, blacklist: blacklistFilter as "active" | "blacklisted" | undefined });
     }
 } catch (e) {
     error = e instanceof Error ? e.message : "Error inesperado";
@@ -40,14 +44,25 @@ interface PageLink {
 }
 
 const pages: PageLink[] = [];
-if (page > 1) pages.push({ label: "prev", href: `?page=${page - 1}`, active: false });
+
+const filterParams = new URLSearchParams();
+if (search) filterParams.set("q", search);
+if (blacklistFilter) filterParams.set("blacklist", blacklistFilter);
+
+const pageHref = (p: number) => {
+    const params = new URLSearchParams(filterParams);
+    params.set("page", String(p));
+    return `?${params.toString()}`;
+};
+
+if (page > 1) pages.push({ label: "prev", href: pageHref(page - 1), active: false });
 const start = Math.max(1, page - Math.floor(PAGE_NUMBERS / 2));
 const end = Math.min(totalPages, start + PAGE_NUMBERS - 1);
 const adjustedStart = Math.max(1, end - PAGE_NUMBERS + 1);
 for (let p = adjustedStart; p <= end; p++) {
-    pages.push({ label: p, href: `?page=${p}`, active: p === page });
+    pages.push({ label: p, href: pageHref(p), active: p === page });
 }
-if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, active: false });
+if (page < totalPages) pages.push({ label: "next", href: pageHref(page + 1), active: false });
 ---
 
 <BaseLayout title="Clientes · ALC Cars">
@@ -59,10 +74,45 @@ if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, ac
                     {error
                         ? "No se pudieron cargar los clientes"
                         : total === 0
-                          ? "No hay clientes registrados"
+                          ? hasFilters
+                              ? "No hay clientes que coincidan con la búsqueda"
+                              : "No hay clientes registrados"
                           : `Mostrando ${from}–${to} de ${total} cliente${total === 1 ? "" : "s"}`}
                 </p>
             </header>
+
+            <form method="GET" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <label class="form-control w-full sm:max-w-xs">
+                    <span class="label-text mb-1">Buscar</span>
+                    <input
+                        type="text"
+                        name="q"
+                        value={search}
+                        placeholder="Nombre, teléfono, DNI, carnet…"
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full sm:max-w-xs">
+                    <span class="label-text mb-1">Estado</span>
+                    <select name="blacklist" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="active" selected={blacklistFilter === "active"}>
+                            Activos
+                        </option>
+                        <option value="blacklisted" selected={blacklistFilter === "blacklisted"}>
+                            Blacklist
+                        </option>
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-primary">
+                    Buscar
+                </button>
+                {hasFilters && (
+                    <a href="/customers" class="btn btn-ghost">
+                        Limpiar filtros
+                    </a>
+                )}
+            </form>
 
             {error ? (
                 <div class="alert alert-error" role="alert">
@@ -70,7 +120,9 @@ if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, ac
                 </div>
             ) : customers.length === 0 ? (
                 <p class="text-slate-500 text-center py-12">
-                    No hay clientes registrados.
+                    {hasFilters
+                        ? "No se encontraron clientes con estos filtros."
+                        : "No hay clientes registrados."}
                 </p>
             ) : (
                 <>
@@ -83,7 +135,7 @@ if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, ac
                                     <th>DNI</th>
                                     <th>Carnet</th>
                                     <th>Email</th>
-                                    <th>Dirección</th>
+                                    <th>Estado</th>
                                     <th class="text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -99,7 +151,15 @@ if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, ac
                                             {customer.drivers_license || "-"}
                                         </td>
                                         <td>{customer.email || "-"}</td>
-                                        <td>{customer.address || "-"}</td>
+                                        <td>
+                                            {customer.blacklisted_at ? (
+                                                <span class="badge badge-sm badge-error" title={customer.blacklist_reason ?? ""}>
+                                                    Blacklist
+                                                </span>
+                                            ) : (
+                                                <span class="badge badge-sm badge-success">Activo</span>
+                                            )}
+                                        </td>
                                         <td class="text-right">
                                             <a
                                                 href={`/customers/edit/${customer.id}`}

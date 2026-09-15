@@ -4,6 +4,8 @@ import {
     getCustomerById,
     updateCustomer,
     deleteCustomer,
+    blacklistCustomer,
+    unblacklistCustomer,
 } from "@/lib/customers";
 import type { Customer } from "@/types/customer";
 import { hasAdminSession } from "@/lib/auth";
@@ -18,6 +20,7 @@ let customer: Customer | null = null;
 let loadError: string | null = null;
 let saveError: string | null = null;
 let deleteError: string | null = null;
+let blacklistError: string | null = null;
 let formData: Record<string, string> = {};
 
 if (!id) {
@@ -40,6 +43,25 @@ if (Astro.request.method === "POST" && customer) {
             return Astro.redirect("/customers");
         } catch (e) {
             deleteError = e instanceof Error ? e.message : "Error inesperado";
+        }
+    } else if (action === "blacklist") {
+        const reason = (form.get("blacklist_reason") ?? "").toString().trim();
+        if (!reason) {
+            blacklistError = "El motivo es obligatorio.";
+        } else {
+            try {
+                await blacklistCustomer(customer.id, reason);
+                return Astro.redirect(`/customers/edit/${customer.id}`);
+            } catch (e) {
+                blacklistError = e instanceof Error ? e.message : "Error inesperado";
+            }
+        }
+    } else if (action === "unblacklist") {
+        try {
+            await unblacklistCustomer(customer.id);
+            return Astro.redirect(`/customers/edit/${customer.id}`);
+        } catch (e) {
+            blacklistError = e instanceof Error ? e.message : "Error inesperado";
         }
     } else {
         formData = Object.fromEntries(form.entries()) as Record<string, string>;
@@ -109,6 +131,11 @@ const v = (name: string, fallback?: string | number | null) =>
                         <span>{deleteError}</span>
                     </div>
                 )}
+                {blacklistError && (
+                    <div class="alert alert-error mb-6" role="alert">
+                        <span>{blacklistError}</span>
+                    </div>
+                )}
                 <form method="post" class="card bg-base-100 border border-base-300 shadow-sm">
                     <div class="card-body gap-4">
                         <div class="grid gap-4 sm:grid-cols-2">
@@ -150,6 +177,87 @@ const v = (name: string, fallback?: string | number | null) =>
                         </div>
                     </div>
                 </form>
+
+                <div class={`card ${customer.blacklisted_at ? 'bg-base-100 border border-error/30 shadow-sm' : 'bg-base-100 border border-base-300 shadow-sm'} mt-6`}>
+                    <div class="card-body">
+                        <h2 class={`card-title ${customer.blacklisted_at ? 'text-error' : ''}`}>
+                            {customer.blacklisted_at ? "En blacklist" : "Blacklist"}
+                        </h2>
+                        {customer.blacklisted_at ? (
+                            <div class="space-y-3">
+                                <div class="bg-error/10 rounded-lg p-3">
+                                    <p class="text-sm font-medium text-error">Motivo:</p>
+                                    <p class="text-sm">{customer.blacklist_reason}</p>
+                                </div>
+                                <div class="text-sm text-slate-500">
+                                    <p>Fecha: {new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date(customer.blacklisted_at))}</p>
+                                </div>
+                                <div class="card-actions justify-end">
+                                    <button class="btn btn-success btn-outline" onclick="document.getElementById('unblacklist-modal').showModal()">
+                                        Quitar de blacklist
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <p class="text-slate-500 mb-4">Marcar este cliente en blacklist para alertar sobre problemas con reservas anteriores.</p>
+                                <div class="card-actions justify-end">
+                                    <button class="btn btn-error btn-outline" onclick="document.getElementById('blacklist-modal').showModal()">
+                                        Marcar en blacklist
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <dialog id="blacklist-modal" class="modal">
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">Marcar en blacklist</h3>
+                        <p class="py-4">
+                            ¿Estás seguro de que quieres marcar a{" "}
+                            <strong>{customer.first_name} {customer.last_name}</strong>{" "}
+                            en blacklist? Esto alertará sobre esta persona en futuras reservas.
+                        </p>
+                        <form method="post" class="space-y-4">
+                            <input type="hidden" name="_action" value="blacklist" />
+                            <label class="form-control">
+                                <span class="label">Motivo *</span>
+                                <textarea name="blacklist_reason" class="textarea textarea-bordered" placeholder="Ej: Dañó vehículo, incumplió política..." required></textarea>
+                            </label>
+                            <div class="modal-action">
+                                <button type="button" class="btn btn-ghost" onclick="document.getElementById('blacklist-modal').close()">Cancelar</button>
+                                <button type="submit" class="btn btn-error">Confirmar</button>
+                            </div>
+                        </form>
+                    </div>
+                    <form method="dialog" class="modal-backdrop">
+                        <button>close</button>
+                    </form>
+                </dialog>
+
+                <dialog id="unblacklist-modal" class="modal">
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">Quitar de blacklist</h3>
+                        <p class="py-4">
+                            ¿Estás seguro de que quieres quitar a{" "}
+                            <strong>{customer.first_name} {customer.last_name}</strong>{" "}
+                            de la blacklist?
+                        </p>
+                        <div class="modal-action">
+                            <form method="dialog">
+                                <button class="btn btn-ghost">Cancelar</button>
+                            </form>
+                            <form method="post">
+                                <input type="hidden" name="_action" value="unblacklist" />
+                                <button type="submit" class="btn btn-success">Sí, quitar</button>
+                            </form>
+                        </div>
+                    </div>
+                    <form method="dialog" class="modal-backdrop">
+                        <button>close</button>
+                    </form>
+                </dialog>
 
                 <div class="card bg-base-100 border border-error/30 shadow-sm mt-6">
                     <div class="card-body">

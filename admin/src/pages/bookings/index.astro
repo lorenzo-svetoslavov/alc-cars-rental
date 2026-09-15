@@ -8,15 +8,50 @@ const PAGE_NUMBERS = 5;
 const rawPage = Number(Astro.url.searchParams.get("page") ?? "1");
 let page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
+const guest_name = Astro.url.searchParams.get("guest_name")?.trim() ?? "";
+const guest_phone = Astro.url.searchParams.get("guest_phone")?.trim() ?? "";
+const car_make = Astro.url.searchParams.get("car_make")?.trim() ?? "";
+const car_model = Astro.url.searchParams.get("car_model")?.trim() ?? "";
+const plate_number = Astro.url.searchParams.get("plate_number")?.trim() ?? "";
+const rawStatus = Astro.url.searchParams.get("status") ?? "";
+const validStatuses = ["pending", "confirmed", "completed", "cancelled"];
+const status = validStatuses.includes(rawStatus) ? rawStatus : "";
+
+const hasFilters =
+    guest_name !== "" ||
+    guest_phone !== "" ||
+    car_make !== "" ||
+    car_model !== "" ||
+    plate_number !== "" ||
+    status !== "";
+
 let result: Awaited<ReturnType<typeof getBookings>> = { data: [], count: 0 };
 let error: string | null = null;
 
 try {
-    result = await getBookings({ page, pageSize: PAGE_SIZE });
+    result = await getBookings({
+        page,
+        pageSize: PAGE_SIZE,
+        guest_name,
+        guest_phone,
+        car_make,
+        car_model,
+        plate_number,
+        status: status || undefined,
+    });
 
     if (result.data.length === 0 && result.count > 0) {
         page = Math.ceil(result.count / PAGE_SIZE);
-        result = await getBookings({ page, pageSize: PAGE_SIZE });
+        result = await getBookings({
+            page,
+            pageSize: PAGE_SIZE,
+            guest_name,
+            guest_phone,
+            car_make,
+            car_model,
+            plate_number,
+            status: status || undefined,
+        });
     }
 } catch (e) {
     error = e instanceof Error ? e.message : "Error inesperado";
@@ -35,14 +70,29 @@ interface PageLink {
 }
 
 const pages: PageLink[] = [];
-if (page > 1) pages.push({ label: "prev", href: `?page=${page - 1}`, active: false });
+
+const filterParams = new URLSearchParams();
+if (guest_name) filterParams.set("guest_name", guest_name);
+if (guest_phone) filterParams.set("guest_phone", guest_phone);
+if (car_make) filterParams.set("car_make", car_make);
+if (car_model) filterParams.set("car_model", car_model);
+if (plate_number) filterParams.set("plate_number", plate_number);
+if (status) filterParams.set("status", status);
+
+const pageHref = (p: number) => {
+    const params = new URLSearchParams(filterParams);
+    params.set("page", String(p));
+    return `?${params.toString()}`;
+};
+
+if (page > 1) pages.push({ label: "prev", href: pageHref(page - 1), active: false });
 const start = Math.max(1, page - Math.floor(PAGE_NUMBERS / 2));
 const end = Math.min(totalPages, start + PAGE_NUMBERS - 1);
 const adjustedStart = Math.max(1, end - PAGE_NUMBERS + 1);
 for (let p = adjustedStart; p <= end; p++) {
-    pages.push({ label: p, href: `?page=${p}`, active: p === page });
+    pages.push({ label: p, href: pageHref(p), active: p === page });
 }
-if (page < totalPages) pages.push({ label: "next", href: `?page=${page + 1}`, active: false });
+if (page < totalPages) pages.push({ label: "next", href: pageHref(page + 1), active: false });
 
 const currency = new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -64,10 +114,105 @@ const dateTime = new Intl.DateTimeFormat("es-ES", {
                     {error
                         ? "No se pudieron cargar las reservas"
                         : total === 0
-                          ? "No hay reservas registradas"
+                          ? hasFilters
+                              ? "No hay reservas que coincidan con la búsqueda"
+                              : "No hay reservas registradas"
                           : `Mostrando ${from}–${to} de ${total} reserva${total === 1 ? "" : "s"}`}
                 </p>
             </header>
+
+            <form
+                method="GET"
+                class="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3"
+            >
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Nombre del cliente</span>
+                    <input
+                        type="text"
+                        name="guest_name"
+                        value={guest_name}
+                        placeholder="Nombre..."
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Teléfono</span>
+                    <input
+                        type="text"
+                        name="guest_phone"
+                        value={guest_phone}
+                        placeholder="Teléfono..."
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Marca</span>
+                    <input
+                        type="text"
+                        name="car_make"
+                        value={car_make}
+                        placeholder="Marca..."
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Modelo</span>
+                    <input
+                        type="text"
+                        name="car_model"
+                        value={car_model}
+                        placeholder="Modelo..."
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Matrícula</span>
+                    <input
+                        type="text"
+                        name="plate_number"
+                        value={plate_number}
+                        placeholder="Matrícula..."
+                        class="input input-bordered"
+                    />
+                </label>
+                <label class="form-control w-full">
+                    <span class="label-text mb-1">Estado</span>
+                    <select name="status" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="pending" selected={status === "pending"}>
+                            Pendiente
+                        </option>
+                        <option
+                            value="confirmed"
+                            selected={status === "confirmed"}
+                        >
+                            Confirmada
+                        </option>
+                        <option
+                            value="completed"
+                            selected={status === "completed"}
+                        >
+                            Completada
+                        </option>
+                        <option
+                            value="cancelled"
+                            selected={status === "cancelled"}
+                        >
+                            Cancelada
+                        </option>
+                    </select>
+                </label>
+                <div class="flex items-end gap-2 col-span-full">
+                    <button type="submit" class="btn btn-primary flex-1 sm:flex-none">
+                        Buscar
+                    </button>
+                    {hasFilters && (
+                        <a href="/bookings" class="btn btn-ghost flex-1 sm:flex-none">
+                            Limpiar filtros
+                        </a>
+                    )}
+                </div>
+            </form>
 
             {error ? (
                 <div class="alert alert-error" role="alert">
@@ -75,7 +220,9 @@ const dateTime = new Intl.DateTimeFormat("es-ES", {
                 </div>
             ) : bookings.length === 0 ? (
                 <p class="text-slate-500 text-center py-12">
-                    No hay reservas registradas.
+                    {hasFilters
+                        ? "No se encontraron reservas con estos filtros."
+                        : "No hay reservas registradas."}
                 </p>
             ) : (
                 <>
@@ -95,9 +242,17 @@ const dateTime = new Intl.DateTimeFormat("es-ES", {
                             <tbody>
                                 {bookings.map((booking) => {
                                     const status = bookingStatus(booking);
+                                    const isBlacklisted = booking.customers?.blacklisted_at;
                                     return (
                                         <tr>
-                                            <td>{booking.guest_name || "-"}</td>
+                                            <td>
+                                                {booking.guest_name || "-"}
+                                                {isBlacklisted && (
+                                                    <span class="badge badge-xs badge-error ml-1" title={booking.customers?.blacklist_reason ?? ""}>
+                                                        Blacklist
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td>
                                                 {booking.cars
                                                     ? `${booking.cars.make} ${booking.cars.model} (${booking.cars.plate_number})`
